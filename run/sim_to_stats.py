@@ -6,18 +6,18 @@ Calculates summary statistics from simulations
 """
 
 import sys
-sys.path.insert(0, '/mnt/NAS/projects/2018_deepLearn_selection/50kb/balancing-selection/scripts') #path to BaSe package
+sys.path.insert(0, '/Users/ulas/Projects/BS_DeepLearning/balancing-selection')
 
 from BaSe.Preprocess import sum_stat
 
-path1='/mnt/NEOGENE1/projects/deepLearn_selection_2018/50kb/results/decompMSMS/'
-path2='/mnt/NEOGENE1/projects/deepLearn_selection_2018/50kb/ann/'
+path_to_sim = '/Users/ulas/Projects/BS_DeepLearning/raw_data/'
+path_to_stats = '/Users/ulas/Projects/BS_DeepLearning/stats/'
 
 N = 50000  # length of simulated sequence (selection scenarios)
 N_NE = 500000 # length of simulated sequence (neutral)
 NCHROMS = 198
-REP_TO = 2000
-REP_FROM = 4000
-cl = 'OD'  #NE, IS, OD, or FD
+REP_TO = 10
+REP_FROM = 1
 
-sum_stat(path1, path2, cl, NCHROMS, REP_TO, REP_FROM, N, N_NE)
+for cls in ["NE", "IS", "OD", "FD"]:
+    sum_stat(path_to_sim, path_to_stats, cls, NCHROMS, REP_FROM, REP_TO, N, N_NE)

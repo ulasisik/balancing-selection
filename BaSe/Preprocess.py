@@ -351,21 +351,144 @@ def load_npys(files):
     return mat
 
 
-def sum_stat(path1, path2, cl, NCHROMS, REP_FROM, REP_TO, N, N_NE):
+def calc_median_r2(g):
+    """Calculates median LD r^2"""
+    gn = g.to_n_alt(fill=-1)
+    LDr = allel.rogers_huff_r(gn)
+    LDr2 = LDr ** 2
+    median_r2 = np.nanmedian(LDr2)
+    return median_r2
+
+
+def calc_kelly_zns(g, n_pos):
+    """Calculates Kelly's Zns statistic"""
+    gn = g.to_n_alt(fill=-1)
+    LDr = allel.rogers_huff_r(gn)
+    LDr2 = LDr ** 2
+    kellyzn = (np.nansum(LDr2) * 2.0) / (n_pos * (n_pos - 1.0))
+    return kellyzn
+
+
+def calc_pi(croms):
+    """Calculates pi"""
+    dis1 = []
+    for i in range(croms.shape[0]):
+        d1 = []
+        for j in range(i + 1, croms.shape[0]):
+            d1.append(sum(croms[i, :] != croms[j, :]))
+        dis1.append(sum(d1))
+    pi_est1 = (sum(dis1) / ((croms.shape[0] * (croms.shape[0] - 1.0)) / 2.0))
+    return pi_est1
+
+
+def calc_faywu_h(croms):
+    """Calculates Fay and Wu's H statistic"""
+    n_sam1 = croms.shape[0]
+    counts1 = croms.sum(axis=0)
+    S_i1 = []
+    for i in range(1, n_sam1):
+        S_i1.append(sum(counts1 == i))
+    i = range(1, n_sam1)
+    n_i = np.subtract(n_sam1, i)
+    thetaP1 = sum((n_i * i * S_i1 * 2) / (n_sam1 * (n_sam1 - 1.0)))
+    thetaH1 = sum((2 * np.multiply(S_i1, np.power(i, 2))) / (n_sam1 * (n_sam1 - 1.0)))
+    Hstat1 = thetaP1 - thetaH1
+    return Hstat1
+
+def calc_fuli_f_star(croms):
+    """Calculates Fu and Li's D* statistic"""
+    n_sam1 = croms.shape[0]
+    n_pos1 = np.size(croms, 1)
+    an = np.sum(np.divide(1.0, range(1, n_sam1)))
+    bn = np.sum(np.divide(1.0, np.power(range(1, n_sam1), 2)))
+    an1 = an + np.true_divide(1, n_sam1)
+
+    vfs = (((2 * (n_sam1 ** 3.0) + 110.0 * (n_sam1 ** 2.0) - 255.0 * n_sam1 + 153) / (
+            9 * (n_sam1 ** 2.0) * (n_sam1 - 1.0))) + ((2 * (n_sam1 - 1.0) * an) / (n_sam1 ** 2.0)) - (
+                   (8.0 * bn) / n_sam1)) / ((an ** 2.0) + bn)
+    ufs = ((n_sam1 / (n_sam1 + 1.0) + (n_sam1 + 1.0) / (3 * (n_sam1 - 1.0)) - 4.0 / (
+            n_sam1 * (n_sam1 - 1.0)) + ((2 * (n_sam1 + 1.0)) / ((n_sam1 - 1.0) ** 2)) * (
+                    an1 - ((2.0 * n_sam1) / (n_sam1 + 1.0)))) / an) - vfs
+
+    pi_est = calc_pi(croms)
+    ss = sum(np.sum(croms, axis=0) == 1)
+    Fstar1 = (pi_est - (((n_sam1 - 1.0) / n_sam1) * ss)) / ((ufs * n_pos1 + vfs * (n_pos1 ** 2.0)) ** 0.5)
+    return Fstar1
+
+def calc_fuli_d_star(croms):
+    """Calculates Fu and Li's D* statistic"""
+    n_sam1 = croms.shape[0]
+    n_pos1 = np.size(croms, 1)
+    an = np.sum(np.divide(1.0, range(1, n_sam1)))
+    bn = np.sum(np.divide(1.0, np.power(range(1, n_sam1), 2)))
+    an1 = an + np.true_divide(1, n_sam1)
+
+    cn = (2 * (((n_sam1 * an) - 2 * (n_sam1 - 1))) / ((n_sam1 - 1) * (n_sam1 - 2)))
+    dn = (cn + np.true_divide((n_sam1 - 2), ((n_sam1 - 1) ** 2)) + np.true_divide(2, (n_sam1 - 1)) * (
+            3.0 / 2 - (2 * an1 - 3) / (n_sam1 - 2) - 1.0 / n_sam1))
+
+    vds = (((n_sam1 / (n_sam1 - 1.0)) ** 2) * bn + (an ** 2) * dn - 2 * (n_sam1 * an * (an + 1)) / (
+            (n_sam1 - 1.0) ** 2)) / (an ** 2 + bn)
+    uds = ((n_sam1 / (n_sam1 - 1.0)) * (an - n_sam1 / (n_sam1 - 1.0))) - vds
+
+    ss = sum(np.sum(croms, axis=0) == 1)
+    Dstar1 = ((n_sam1 / (n_sam1 - 1.0)) * n_pos1 - (an * ss)) / (uds * n_pos1 + vds * (n_pos1 ^ 2)) ** 0.5
+    return Dstar1
+
+def calc_zeng_e(croms):
+    """Calculates Zeng et al's E statistic"""
+    n_sam1 = croms.shape[0]
+    n_pos1 = np.size(croms, 1)
+    an = np.sum(np.divide(1.0, range(1, n_sam1)))
+    bn = np.sum(np.divide(1.0, np.power(range(1, n_sam1), 2)))
+    counts1 = croms.sum(axis=0)
+    S_i1 = []
+    for i in range(1, n_sam1):
+        S_i1.append(sum(counts1 == i))
+    thetaW = n_pos1 / an
+    thetaL = np.sum(np.multiply(S_i1, range(1, n_sam1))) / (n_sam1 - 1.0)
+    theta2 = (n_pos1 * (n_pos1 - 1.0)) / (an ** 2 + bn)
+
+    var1 = (n_sam1 / (2.0 * (n_sam1 - 1.0)) - 1.0 / an) * thetaW
+    var2 = theta2 * (bn / (an ** 2.0)) + 2 * bn * (n_sam1 / (n_sam1 - 1.0)) ** 2.0 - (
+            2.0 * (n_sam1 * bn - n_sam1 + 1.0)) / ((n_sam1 - 1.0) * an) - (3.0 * n_sam1 + 1.0) / (
+               (n_sam1 - 1.0))
+    varlw = var1 + var2
+
+    ZengE1 = (thetaL - thetaW) / (varlw) ** 0.5
+    return ZengE1
+
+def calc_rageddness(croms):
+    """Calculates rageddness index"""
+    mist = []
+    for i in range(croms.shape[0] - 1):
+        for j in range(i + 1, croms.shape[0]):
+            mist.append(sum(croms[i, :] != croms[j, :]))
+    mist = np.array(mist)
+    lnt = mist.shape[0]
+    fclass = []
+    for i in range(1, np.max(mist) + 2):
+        fclass.append((np.true_divide(sum(mist == i), lnt) - np.true_divide(sum(mist == (i - 1)), lnt)) ** 2)
+    rgd1 = np.sum(fclass)
+    return rgd1
+
+def sum_stat(path_to_sim, path_to_stat, cls, NCHROMS, REP_FROM, REP_TO, N, N_NE):
     '''
     Calculates summary statistics for simulation data:
         -input file must be in a msms(and .txt) format and
     Arguments:
-        path1 (string) -- Path to directory where the simulation files exist
-        path2 (string) -- Path to directory where the summary statistics will be stored
-        cl (string) -- Class of the simulation(either FD, OD, IS or NE):
+        path_to_sim (string) -- Path to directory where the simulation files exist
+        path_to_stat (string) -- Path to directory where the summary statistics will be stored
+        cls (string) -- Class of the simulation(either FD, OD, IS or NE):
             -FD: negative-frequency dependent selection
             -OD: over dominance
             -IS: incomplete sweep
             -NE: neutral
         NCHROMS (int) -- number of samples(haploid individuals, or chromosoms)
-        R (int) -- iteration number
-        N (int) -- length of the simulated sequence(bp))
+        REP_FROM: number of simulations (replicate) -starting from
+        REP_TO: number of simulations -until
+        N: length of the simulated sequence(bp) for selection scenarios
+        N_NE: length of simulated sequence(bp) for neutral scenario
     Output:
         csv file containing summary statistics
     '''
@@ -373,481 +496,319 @@ def sum_stat(path1, path2, cl, NCHROMS, REP_FROM, REP_TO, N, N_NE):
         once = 0
     else:
         once = 1
-    for r in range(REP_FROM, REP_TO + 1):
-        files = glob(path1 + cl + '*_' + str(r) + '.txt')
-        for f in files:
-            fname = f.split('/')[-1].replace('.txt', '')
-            if 'NE' in fname:
-                crom, positions = read_msms(f, NCHROMS, N_NE)
-                croms, pos = rearrange_neutral(crom, positions, NCHROMS, N)
+
+    all_files = os.scandir(path_to_sim)
+    files = [file for file in all_files
+             if file.is_file()
+             if file.name.startswith(cls)
+             if int(file.name.replace(".txt", "").split("_")[-1]) in range(REP_FROM, REP_TO + 1)]
+
+    for file in files:
+        print(file.name)
+        f = file.path
+        fname = file.name.replace(".txt", "")
+        time = fname.split('_')[1]
+        r = fname.split('_')[-1]
+
+        if fname.startswith("NE"):
+            crom, positions = read_msms(f, NCHROMS, N_NE)
+            croms, pos = rearrange_neutral(crom, positions, NCHROMS, N)
+        else:
+            croms, pos = read_msms(f, NCHROMS, N)
+
+        # SUMMARY STATISTICS
+        # REGION 1: central 10kb([20kb:30kb])
+        pos1 = pos[np.logical_and(pos > 20000, pos < 30000)]
+        croms1 = croms[:, np.logical_and(pos > 20000, pos < 30000).tolist()]
+        n_pos1 = np.size(croms1, 1)
+        freq1 = np.true_divide(croms1.sum(axis=0), NCHROMS)
+        freq1 = np.array(freq1)
+
+        haplos = np.transpose(croms1)
+        h1 = allel.HaplotypeArray(haplos)
+        ac1 = h1.count_alleles()
+        g1 = h1.to_genotypes(ploidy=2, copy=True)
+
+        # mean_pairwise_distance
+        mean_mean_pwise_dis1 = np.mean(allel.mean_pairwise_difference(ac1))
+        median_mean_pwise_dis1 = np.median(allel.mean_pairwise_difference(ac1))
+        max_mean_pwise_dis1 = np.max(allel.mean_pairwise_difference(ac1))
+
+        # tajimasd
+        TjD1 = allel.tajima_d(ac1)
+
+        # watterson
+        theta_hat_w1 = allel.watterson_theta(pos1, ac1)
+
+        # heterogeneity
+        obs_het1 = allel.heterozygosity_observed(g1)
+        af1 = ac1.to_frequencies()
+        exp_het1 = allel.heterozygosity_expected(af1, ploidy=2)
+        mean_obs_het1 = np.mean(obs_het1)
+        median_obs_het1 = np.median(obs_het1)
+        max_obs_het1 = np.max(obs_het1)
+        mean_obs_exp1 = np.nanmean(obs_het1 / exp_het1)
+        median_obs_exp1 = np.nanmedian(obs_het1 / exp_het1)
+        max_obs_exp1 = np.nanmax(obs_het1 / exp_het1)
+
+        # LD r
+        median_r21 = calc_median_r2(g1)
+
+        # Haplotype_stats
+        hh1 = allel.garud_h(h1)
+        h11 = hh1[0]
+        h121 = hh1[1]
+        h1231 = hh1[2]
+        h2_h11 = hh1[3]
+        n_hap1 = np.unique(croms1, axis=0).shape[0]
+        hap_div1 = allel.haplotype_diversity(h1)
+
+        ehh1 = allel.ehh_decay(h1)
+        mean_ehh1 = np.mean(ehh1)
+        median_ehh1 = np.median(ehh1)
+
+        ihs1 = allel.ihs(h1, pos1, include_edges=True)
+        median_ihs1 = np.nanmedian(ihs1)
+
+        # nsl
+        nsl1 = allel.nsl(h1)
+        max_nsl1 = np.nanmax(nsl1)
+        median_nsl1 = np.nanmedian(nsl1)
+
+        # NCD
+        n = n_pos1
+        tf = 0.5
+        ncd21 = (sum((freq1 - tf) ** 2) / n) ** 0.5
+        freq11 = freq1[freq1 < 1]
+        n1 = freq11.shape[0]
+        ncd11 = (sum((freq11 - tf) ** 2) / n1) ** 0.5
+
+        # kellyZns
+        kellyzn1 = calc_kelly_zns(g1, n_pos1)
+
+        # pi
+        pi_est1 = calc_pi(croms1)
+
+        # FayWusH
+        Hstat1 = calc_faywu_h(croms1)
+
+        # of singletons
+        Ss1 = sum(np.sum(croms1, axis=0) == 1)
+
+        # fu_li Dstar
+        Dstar1 = calc_fuli_d_star(croms1)
+
+        # fu_li Fstar
+        Fstar1 = calc_fuli_f_star(croms1)
+
+        # Zeng_E
+        ZengE1 = calc_zeng_e(croms1)
+
+        # rageddness index
+        rgd1 = calc_rageddness(croms1)
+
+        ###################################################################
+        # REGION 2: 20kb regions far from selected site([0:20kb]&[30:50kb])
+        ###################################################################
+        pos2 = pos[np.logical_or(pos <= 20000, pos >= 30000)]
+        croms2 = croms[:, np.logical_or(pos <= 20000, pos >= 30000).tolist()]
+        n_pos2 = np.size(croms2, 1)
+        freq2 = np.true_divide(croms2.sum(axis=0), NCHROMS)
+        freq2 = np.array(freq2)
+
+        haplos = np.transpose(croms2)
+        h2 = allel.HaplotypeArray(haplos)
+        ac2 = h2.count_alleles()
+        g2 = h2.to_genotypes(ploidy=2, copy=True)
+
+        # mean_pairwise_distance
+        mean_mean_pwise_dis2 = np.mean(allel.mean_pairwise_difference(ac2))
+        median_mean_pwise_dis2 = np.median(allel.mean_pairwise_difference(ac2))
+        max_mean_pwise_dis2 = np.max(allel.mean_pairwise_difference(ac2))
+
+        # tajimasd
+        TjD2 = allel.tajima_d(ac2)
+
+        # watterson
+        theta_hat_w2 = allel.watterson_theta(pos2, ac2)
+
+        # heterogeneity
+        obs_het2 = allel.heterozygosity_observed(g2)
+        af2 = ac2.to_frequencies()
+        exp_het2 = allel.heterozygosity_expected(af2, ploidy=2)
+        mean_obs_het2 = np.mean(obs_het2)
+        median_obs_het2 = np.median(obs_het2)
+        max_obs_het2 = np.max(obs_het2)
+        mean_obs_exp2 = np.nanmean(obs_het2 / exp_het2)
+        median_obs_exp2 = np.nanmedian(obs_het2 / exp_het2)
+        max_obs_exp2 = np.nanmax(obs_het2 / exp_het2)
+
+        # LD r
+        median_r2 = calc_median_r2(g2)
+
+        # Haplotype_stats
+        hh2 = allel.garud_h(h2)
+        h12 = hh2[0]
+        h122 = hh2[1]
+        h1232 = hh2[2]
+        h2_h12 = hh2[3]
+        n_hap2 = np.unique(croms2, axis=0).shape[0]
+        hap_div2 = allel.haplotype_diversity(h2)
+
+        ehh2 = allel.ehh_decay(h2)
+        mean_ehh2 = np.mean(ehh2)
+        median_ehh2 = np.median(ehh2)
+
+        ihs2 = allel.ihs(h2, pos2, include_edges=True)
+        median_ihs2 = np.nanmedian(ihs2)
+
+        # NCD
+        n = n_pos2
+        tf = 0.5
+        ncd22 = (sum((freq2 - tf) ** 2) / n) ** 0.5
+        freq12 = freq2[freq2 < 1]
+        n1 = freq12.shape[0]
+        ncd12 = (sum((freq12 - tf) ** 2) / n1) ** 0.5
+
+        # nsl
+        nsl2 = allel.nsl(h2)
+        max_nsl2 = np.nanmax(nsl2)
+        median_nsl2 = np.nanmedian(nsl2)
+
+        # kellyZns
+        kellyzn2 = calc_kelly_zns(g2, n_pos2)
+
+        # pi
+        pi_est2 = calc_pi(croms2)
+
+        # FayWusH
+        Hstat2 = calc_faywu_h(croms2)
+
+        # of singletons
+        Ss2 = sum(np.sum(croms2, axis=0) == 1)
+
+        # fu_li Dstar
+        Dstar2 = calc_fuli_d_star(croms2)
+
+        # fu_li Fstar
+        Fstar2 = calc_fuli_f_star(croms2)
+
+        # Zeng_E
+        ZengE2 = calc_zeng_e(croms2)
+
+        # rageddness index
+        rgd2 = calc_rageddness(croms2)
+
+
+        # Write on csv file
+        f = open("{}{}.csv".format(path_to_stat, cls), 'a+')
+
+        with f:
+            header = ['Class', 'Time', 'Iteration',
+                      'Mean(MeanPwiseDist)1',
+                      'Median(MeanPwiseDist)1',
+                      'Max(MeanPwiseDist)1',
+                      'Tajimas D1', 'Watterson1',
+                      'Mean(ObservedHet)1', 'Median(ObservedHet)1',
+                      'Max(ObservedHet)1', 'Mean(Obs/Exp Het)1',
+                      'Median(Obs/Exp Het)1', 'Max(Obs/Exp Het)1',
+                      'Median(r2)1',
+                      'H1_1', 'H12_1', 'H123_1', 'H2/H1_1', 'Haplotype Diversity1',
+                      '# of Hap1', 'Mean(EHH)1', 'Median(EHH)1',
+                      'Median(ihs)1', 'Max(nsl)1', 'Median(nsl)1',
+                      'NCD1_1', 'NCD2_1', 'KellyZns1', 'pi1', 'faywuH1',
+                      '#ofSingletons1', 'Dstar1', 'Fstar1', 'ZengE1', 'Rageddnes1',
+                      #
+                      'Mean(MeanPwiseDist)2',
+                      'Median(MeanPwiseDist)',
+                      'Max(MeanPwiseDist)2',
+                      'Tajimas D2', 'Watterson2',
+                      'Mean(ObservedHet)2', 'Median(ObservedHet)2',
+                      'Max(ObservedHet)2', 'Mean(Obs/Exp Het)2',
+                      'Median(Obs/Exp Het)2', 'Max(Obs/Exp Het)2',
+                      'Median(r2)',
+                      'H1_2', 'H12_2', 'H123_2', 'H2/H1_2', 'Haplotype Diversity_2',
+                      '# of Hap2', 'Mean(EHH)2', 'Median(EHH)2',
+                      'Median(ihs)2', 'Max(nsl)2', 'Median(nsl)2',
+                      'NCD1_2', 'NCD2_2', 'KellyZns2', 'pi2', 'faywuH2',
+                      '#ofSingletons2', 'Dstar2', 'Fstar2', 'ZengE2', 'Rageddnes2']
+            writer = csv.DictWriter(f, fieldnames=header)
+
+            if once == 0:
+                writer.writeheader()
+                writer.writerow({'Class': str(cls), 'Iteration': str(r),
+                                 'Time': str(time),
+                                 'Mean(MeanPwiseDist)1': mean_mean_pwise_dis1,
+                                 'Median(MeanPwiseDist)1': median_mean_pwise_dis1,
+                                 'Max(MeanPwiseDist)1': max_mean_pwise_dis1,
+                                 'Tajimas D1': TjD1, 'Watterson1': theta_hat_w1,
+                                 'Mean(ObservedHet)1': mean_obs_het1, 'Median(ObservedHet)1': median_obs_het1,
+                                 'Max(ObservedHet)1': max_obs_het1, 'Mean(Obs/Exp Het)1': mean_obs_exp1,
+                                 'Median(Obs/Exp Het)1': median_obs_exp1, 'Max(Obs/Exp Het)1': max_obs_exp1,
+                                 'Median(r2)1': median_r21,
+                                 'H1_1': h11, 'H12_1': h121, 'H123_1': h1231, 'H2/H1_1': h2_h11,
+                                 'Haplotype Diversity1': hap_div1,
+                                 '# of Hap1': n_hap1, 'Mean(EHH)1': mean_ehh1, 'Median(EHH)1': median_ehh1,
+                                 'Median(ihs)1': median_ihs1, 'Max(nsl)1': max_nsl1, 'Median(nsl)1': median_nsl1,
+                                 'NCD1_1': ncd11, 'NCD2_1': ncd21, 'KellyZns1': kellyzn1, 'pi1': pi_est1,
+                                 'faywuH1': Hstat1,
+                                 '#ofSingletons1': Ss1, 'Dstar1': Dstar1, 'Fstar1': Fstar1, 'ZengE1': ZengE1,
+                                 'Rageddnes1': rgd1,
+                                 #
+                                 'Mean(MeanPwiseDist)2': mean_mean_pwise_dis2,
+                                 'Median(MeanPwiseDist)': median_mean_pwise_dis2,
+                                 'Max(MeanPwiseDist)2': max_mean_pwise_dis2,
+                                 'Tajimas D2': TjD2, 'Watterson2': theta_hat_w2,
+                                 'Mean(ObservedHet)2': mean_obs_het2, 'Median(ObservedHet)2': median_obs_het2,
+                                 'Max(ObservedHet)2': max_obs_het2, 'Mean(Obs/Exp Het)2': mean_obs_exp2,
+                                 'Median(Obs/Exp Het)2': median_obs_exp2, 'Max(Obs/Exp Het)2': max_obs_exp2,
+                                 'Median(r2)': median_r2,
+                                 'H1_2': h12, 'H12_2': h122, 'H123_2': h1232, 'H2/H1_2': h2_h12,
+                                 'Haplotype Diversity_2': hap_div2,
+                                 '# of Hap2': n_hap2, 'Mean(EHH)2': mean_ehh2, 'Median(EHH)2': median_ehh2,
+                                 'Median(ihs)2': median_ihs2, 'Max(nsl)2': max_nsl2, 'Median(nsl)2': median_nsl2,
+                                 'NCD1_2': ncd12, 'NCD2_2': ncd22, 'KellyZns2': kellyzn2, 'pi2': pi_est2,
+                                 'faywuH2': Hstat2,
+                                 '#ofSingletons2': Ss2, 'Dstar2': Dstar2, 'Fstar2': Fstar2, 'ZengE2': ZengE2,
+                                 'Rageddnes2': rgd2})
+                once = 1
             else:
-                croms, pos = read_msms(f, NCHROMS, N)
-            # SUMMARY STATISTICS
-            # REGION 1: middle 10kb([20kb:30kb])
-            pos1 = pos[np.logical_and(pos > 20000, pos < 30000)]
-            croms1 = croms[:, np.logical_and(pos > 20000, pos < 30000).tolist()]
-            n_pos1 = np.size(croms1, 1)
-            freq1 = np.true_divide(croms1.sum(axis=0), NCHROMS)
-            freq1 = np.array(freq1)
+                writer.writerow({'Class': str(cls), 'Iteration': str(r),
+                                 'Time': str(time),
+                                 'Mean(MeanPwiseDist)1': mean_mean_pwise_dis1,
+                                 'Median(MeanPwiseDist)1': median_mean_pwise_dis1,
+                                 'Max(MeanPwiseDist)1': max_mean_pwise_dis1,
+                                 'Tajimas D1': TjD1, 'Watterson1': theta_hat_w1,
+                                 'Mean(ObservedHet)1': mean_obs_het1, 'Median(ObservedHet)1': median_obs_het1,
+                                 'Max(ObservedHet)1': max_obs_het1, 'Mean(Obs/Exp Het)1': mean_obs_exp1,
+                                 'Median(Obs/Exp Het)1': median_obs_exp1, 'Max(Obs/Exp Het)1': max_obs_exp1,
+                                 'Median(r2)1': median_r21,
+                                 'H1_1': h11, 'H12_1': h121, 'H123_1': h1231, 'H2/H1_1': h2_h11,
+                                 'Haplotype Diversity1': hap_div1,
+                                 '# of Hap1': n_hap1, 'Mean(EHH)1': mean_ehh1, 'Median(EHH)1': median_ehh1,
+                                 'Median(ihs)1': median_ihs1, 'Max(nsl)1': max_nsl1, 'Median(nsl)1': median_nsl1,
+                                 'NCD1_1': ncd11, 'NCD2_1': ncd21, 'KellyZns1': kellyzn1, 'pi1': pi_est1,
+                                 'faywuH1': Hstat1,
+                                 '#ofSingletons1': Ss1, 'Dstar1': Dstar1, 'Fstar1': Fstar1, 'ZengE1': ZengE1,
+                                 'Rageddnes1': rgd1,
+                                 #
+                                 'Mean(MeanPwiseDist)2': mean_mean_pwise_dis2,
+                                 'Median(MeanPwiseDist)': median_mean_pwise_dis2,
+                                 'Max(MeanPwiseDist)2': max_mean_pwise_dis2,
+                                 'Tajimas D2': TjD2, 'Watterson2': theta_hat_w2,
+                                 'Mean(ObservedHet)2': mean_obs_het2, 'Median(ObservedHet)2': median_obs_het2,
+                                 'Max(ObservedHet)2': max_obs_het2, 'Mean(Obs/Exp Het)2': mean_obs_exp2,
+                                 'Median(Obs/Exp Het)2': median_obs_exp2, 'Max(Obs/Exp Het)2': max_obs_exp2,
+                                 'Median(r2)': median_r2,
+                                 'H1_2': h12, 'H12_2': h122, 'H123_2': h1232, 'H2/H1_2': h2_h12,
+                                 'Haplotype Diversity_2': hap_div2,
+                                 '# of Hap2': n_hap2, 'Mean(EHH)2': mean_ehh2, 'Median(EHH)2': median_ehh2,
+                                 'Median(ihs)2': median_ihs2, 'Max(nsl)2': max_nsl2, 'Median(nsl)2': median_nsl2,
+                                 'NCD1_2': ncd12, 'NCD2_2': ncd22, 'KellyZns2': kellyzn2, 'pi2': pi_est2,
+                                 'faywuH2': Hstat2,
+                                 '#ofSingletons2': Ss2, 'Dstar2': Dstar2, 'Fstar2': Fstar2, 'ZengE2': ZengE2,
+                                 'Rageddnes2': rgd2})
 
-            haplos = np.transpose(croms1)
-            h1 = allel.HaplotypeArray(haplos)
-            ac1 = h1.count_alleles()
-            g1 = h1.to_genotypes(ploidy=2, copy=True)
-            # mean_pairwise_distance
-            mean_mean_pwise_dis1 = np.mean(allel.mean_pairwise_difference(ac1))
-            median_mean_pwise_dis1 = np.median(allel.mean_pairwise_difference(ac1))
-            max_mean_pwise_dis1 = np.max(allel.mean_pairwise_difference(ac1))
-            # tajimasd
-            TjD1 = allel.tajima_d(ac1)
-            # watterson
-            theta_hat_w1 = allel.watterson_theta(pos1, ac1)
-            # heterogeneity
-            obs_het1 = allel.heterozygosity_observed(g1)
-            af1 = ac1.to_frequencies()
-            exp_het1 = allel.heterozygosity_expected(af1, ploidy=2)
-            mean_obs_het1 = np.mean(obs_het1)
-            median_obs_het1 = np.median(obs_het1)
-            max_obs_het1 = np.max(obs_het1)
-            mean_obs_exp1 = np.nanmean(obs_het1 / exp_het1)
-            median_obs_exp1 = np.nanmedian(obs_het1 / exp_het1)
-            max_obs_exp1 = np.nanmax(obs_het1 / exp_het1)
-            # LD r
-            gn1 = g1.to_n_alt(fill=-1)
-            LDr1 = allel.rogers_huff_r(gn1)
-            LDr21 = LDr1 ** 2
-            median_r21 = np.nanmedian(LDr21)
-            # kellyZns
-            kellyzn1 = (np.nansum(LDr21) * 2.0) / (n_pos1 * (n_pos1 - 1.0))
-            # pi
-            dis1 = []
-            for i in range(croms1.shape[0]):
-                d1 = []
-                for j in range(i + 1, croms1.shape[0]):
-                    d1.append(sum(croms1[i, :] != croms1[j, :]))
-                dis1.append(sum(d1))
-            pi_est1 = (sum(dis1) / ((croms1.shape[0] * (croms1.shape[0] - 1.0)) / 2.0))
-
-            # FayWusH
-            n_sam1 = croms1.shape[0]
-            counts1 = croms1.sum(axis=0)
-            S_i1 = []
-            for i in range(1, n_sam1):
-                S_i1.append(sum(counts1 == i))
-            i = range(1, n_sam1)
-            n_i = np.subtract(n_sam1, i)
-            thetaP1 = sum((n_i * i * S_i1 * 2) / (n_sam1 * (n_sam1 - 1.0)))
-            thetaH1 = sum((2 * np.multiply(S_i1, np.power(i, 2))) / (n_sam1 * (n_sam1 - 1.0)))
-            # thetaP = np.sum(np.true_divide(np.multiply(np.multiply(S_i,i), np.multiply(n_i,2)), (n_sam*(n_sam-1))))
-            # thetaH = np.sum(np.true_divide(2*np.multiply(S_i,np.power(i,2)), (n_sam*(n_sam-1))))
-            Hstat1 = thetaP1 - thetaH1
-
-            # DIND #ref:barreiro et al. plos genetics 2009, toll-like receptor
-            #        ipA=[]
-            #        ipD=[]
-            #        count=0
-            #        for posit in range(n_pos):
-            #            count=count+1
-            #            As=croms[croms[:,posit] == 0,:]
-            #            Ds=croms[croms[:,posit] == 1,:]
-            #            disA = []
-            #            for i in range(As.shape[0]-1):
-            #                for j in range(i+1, As.shape[0]):
-            #                    disA.append(sum(As[i,:] != As[j,:]))
-            #            disD=[]
-            #            for k in range(0,Ds.shape[0]-1):
-            #                for l in range(k+1, Ds.shape[0]):
-            #                    disD.append(sum(Ds[k,:] != Ds[l,:]))
-            #            if len(disD) == 0:
-            #                ipD.append(0)
-            #            else:
-            #                ipD.append(sum(disD)/len(disD))
-            #            if len(disA) == 0:
-            #                ipA.append(0)
-            #            else:
-            #                ipA.append(sum(disA)/len(disA))
-            #        ipD = np.array(ipD)
-            #        ipA = np.array(ipA)
-            #        dind=np.divide(ipA,ipD)
-            #
-            #        freq1=freq[dind != 0]
-            #        dind=dind[dind != 0]
-            #        dind_freq = dind/freq1
-            #        max_dind= np.max(dind_freq)
-            #        median_dind= np.median(dind_freq)
-
-            # fu_li Dstar
-            Ss1 = sum(np.sum(croms1, axis=0) == 1)  # of singletons
-
-            an = np.sum(np.divide(1.0, range(1, n_sam1)))
-            bn = np.sum(np.divide(1.0, np.power(range(1, n_sam1), 2)))
-            an1 = an + np.true_divide(1, n_sam1)
-
-            cn = (2 * (((n_sam1 * an) - 2 * (n_sam1 - 1))) / ((n_sam1 - 1) * (n_sam1 - 2)))
-            dn = (cn + np.true_divide((n_sam1 - 2), ((n_sam1 - 1) ** 2)) + np.true_divide(2, (n_sam1 - 1)) * (
-                        3.0 / 2 - (2 * an1 - 3) / (n_sam1 - 2) - 1.0 / n_sam1))
-
-            vds = (((n_sam1 / (n_sam1 - 1.0)) ** 2) * bn + (an ** 2) * dn - 2 * (n_sam1 * an * (an + 1)) / (
-                        (n_sam1 - 1.0) ** 2)) / (an ** 2 + bn)
-            uds = ((n_sam1 / (n_sam1 - 1.0)) * (an - n_sam1 / (n_sam1 - 1.0))) - vds
-
-            Dstar1 = ((n_sam1 / (n_sam1 - 1.0)) * n_pos1 - (an * Ss1)) / (uds * n_pos1 + vds * (n_pos1 ^ 2)) ** 0.5
-
-            # fu_li Fstar
-            vfs = (((2 * (n_sam1 ** 3.0) + 110.0 * (n_sam1 ** 2.0) - 255.0 * n_sam1 + 153) / (
-                        9 * (n_sam1 ** 2.0) * (n_sam1 - 1.0))) + ((2 * (n_sam1 - 1.0) * an) / (n_sam1 ** 2.0)) - (
-                               (8.0 * bn) / n_sam1)) / ((an ** 2.0) + bn)
-            ufs = ((n_sam1 / (n_sam1 + 1.0) + (n_sam1 + 1.0) / (3 * (n_sam1 - 1.0)) - 4.0 / (
-                        n_sam1 * (n_sam1 - 1.0)) + ((2 * (n_sam1 + 1.0)) / ((n_sam1 - 1.0) ** 2)) * (
-                                an1 - ((2.0 * n_sam1) / (n_sam1 + 1.0)))) / an) - vfs
-
-            Fstar1 = (pi_est1 - (((n_sam1 - 1.0) / n_sam1) * Ss1)) / ((ufs * n_pos1 + vfs * (n_pos1 ** 2.0)) ** 0.5)
-
-            # Zeng_E
-            thetaW = n_pos1 / an
-            thetaL = np.sum(np.multiply(S_i1, range(1, n_sam1))) / (n_sam1 - 1.0)
-            theta2 = (n_pos1 * (n_pos1 - 1.0)) / (an ** 2 + bn)
-
-            var1 = (n_sam1 / (2.0 * (n_sam1 - 1.0)) - 1.0 / an) * thetaW
-            var2 = theta2 * (bn / (an ** 2.0)) + 2 * bn * (n_sam1 / (n_sam1 - 1.0)) ** 2.0 - (
-                        2.0 * (n_sam1 * bn - n_sam1 + 1.0)) / ((n_sam1 - 1.0) * an) - (3.0 * n_sam1 + 1.0) / (
-                   (n_sam1 - 1.0))
-            varlw = var1 + var2
-
-            ZengE1 = (thetaL - thetaW) / (varlw) ** 0.5
-
-            # rageddness index
-            mist = []
-            for i in range(croms1.shape[0] - 1):
-                for j in range(i + 1, croms1.shape[0]):
-                    mist.append(sum(croms1[i, :] != croms1[j, :]))
-            mist = np.array(mist)
-            lnt = mist.shape[0]
-            fclass = []
-            for i in range(1, np.max(mist) + 2):
-                fclass.append((np.true_divide(sum(mist == i), lnt) - np.true_divide(sum(mist == (i - 1)), lnt)) ** 2)
-            rgd1 = np.sum(fclass)
-
-            # Haplotype_stats
-            hh1 = allel.garud_h(h1)
-            h11 = hh1[0]
-            h121 = hh1[1]
-            h1231 = hh1[2]
-            h2_h11 = hh1[3]
-            n_hap1 = np.unique(croms1, axis=0).shape[0]
-            hap_div1 = allel.haplotype_diversity(h1)
-
-            ehh1 = allel.ehh_decay(h1)
-            mean_ehh1 = np.mean(ehh1)
-            median_ehh1 = np.median(ehh1)
-
-            ihs1 = allel.ihs(h1, pos1, include_edges=True)
-            median_ihs1 = np.nanmedian(ihs1)
-            # NCD
-            n = n_pos1
-            tf = 0.5
-            ncd21 = (sum((freq1 - tf) ** 2) / n) ** 0.5
-            freq11 = freq1[freq1 < 1]
-            n1 = freq11.shape[0]
-            ncd11 = (sum((freq11 - tf) ** 2) / n1) ** 0.5
-
-            # nsl
-            nsl1 = allel.nsl(h1)
-            max_nsl1 = np.nanmax(nsl1)
-            median_nsl1 = np.nanmedian(nsl1)
-            # nsl = nsl[mask_1]
-            # nsl = nsl[mask_2]
-            # size = np.size(nsl)
-            # if size == 0:
-            #    nsl_max = 0
-            # else:
-            #    nsl_max = np.max(nsl)
-
-            #################################################################
-            # REGION 2: 20kb regions far from selected site([0:20kb]&[30:50kb])
-            pos2 = pos[np.logical_or(pos <= 20000, pos >= 30000)]
-            croms2 = croms[:, np.logical_or(pos <= 20000, pos >= 30000).tolist()]
-            n_pos2 = np.size(croms2, 1)
-            freq2 = np.true_divide(croms2.sum(axis=0), NCHROMS)
-            freq2 = np.array(freq2)
-
-            haplos = np.transpose(croms2)
-            h2 = allel.HaplotypeArray(haplos)
-            ac2 = h2.count_alleles()
-            g2 = h2.to_genotypes(ploidy=2, copy=True)
-            # mean_pairwise_distance
-            mean_mean_pwise_dis2 = np.mean(allel.mean_pairwise_difference(ac2))
-            median_mean_pwise_dis2 = np.median(allel.mean_pairwise_difference(ac2))
-            max_mean_pwise_dis2 = np.max(allel.mean_pairwise_difference(ac2))
-            # tajimasd
-            TjD2 = allel.tajima_d(ac2)
-            # watterson
-            theta_hat_w2 = allel.watterson_theta(pos2, ac2)
-            # heterogeneity
-            obs_het2 = allel.heterozygosity_observed(g2)
-            af2 = ac2.to_frequencies()
-            exp_het2 = allel.heterozygosity_expected(af2, ploidy=2)
-            mean_obs_het2 = np.mean(obs_het2)
-            median_obs_het2 = np.median(obs_het2)
-            max_obs_het2 = np.max(obs_het2)
-            mean_obs_exp2 = np.nanmean(obs_het2 / exp_het2)
-            median_obs_exp2 = np.nanmedian(obs_het2 / exp_het2)
-            max_obs_exp2 = np.nanmax(obs_het2 / exp_het2)
-            # LD r
-            gn2 = g2.to_n_alt(fill=-1)
-            LDr2 = allel.rogers_huff_r(gn2)
-            LDr22 = LDr2 ** 2
-            median_r2 = np.nanmedian(LDr2)
-            # kellyZns
-            kellyzn2 = (np.nansum(LDr22) * 2.0) / (n_pos2 * (n_pos2 - 1.0))
-            # pi
-            dis2 = []
-            for i in range(croms2.shape[0]):
-                d1 = []
-                for j in range(i + 1, croms2.shape[0]):
-                    d1.append(sum(croms2[i, :] != croms2[j, :]))
-                dis2.append(sum(d1))
-            pi_est2 = (sum(dis2) / ((croms2.shape[0] * (croms2.shape[0] - 1.0)) / 2.0))
-
-            # FayWusH
-            n_sam2 = croms2.shape[0]
-            counts2 = croms2.sum(axis=0)
-            S_i2 = []
-            for i in range(1, n_sam2):
-                S_i2.append(sum(counts2 == i))
-            i = range(1, n_sam2)
-            n_i = np.subtract(n_sam2, i)
-            thetaP2 = sum((n_i * i * S_i2 * 2) / (n_sam2 * (n_sam2 - 1.0)))
-            thetaH2 = sum((2 * np.multiply(S_i2, np.power(i, 2))) / (n_sam2 * (n_sam2 - 1.0)))
-            # thetaP = np.sum(np.true_divide(np.multiply(np.multiply(S_i,i), np.multiply(n_i,2)), (n_sam*(n_sam-1))))
-            # thetaH = np.sum(np.true_divide(2*np.multiply(S_i,np.power(i,2)), (n_sam*(n_sam-1))))
-            Hstat2 = thetaP2 - thetaH2
-
-            # DIND #ref:barreiro et al. plos genetics 2009, toll-like receptor
-            #        ipA=[]
-            #        ipD=[]
-            #        count=0
-            #        for posit in range(n_pos):
-            #            count=count+1
-            #            As=croms[croms[:,posit] == 0,:]
-            #            Ds=croms[croms[:,posit] == 1,:]
-            #            disA = []
-            #            for i in range(As.shape[0]-1):
-            #                for j in range(i+1, As.shape[0]):
-            #                    disA.append(sum(As[i,:] != As[j,:]))
-            #            disD=[]
-            #            for k in range(0,Ds.shape[0]-1):
-            #                for l in range(k+1, Ds.shape[0]):
-            #                    disD.append(sum(Ds[k,:] != Ds[l,:]))
-            #            if len(disD) == 0:
-            #                ipD.append(0)
-            #            else:
-            #                ipD.append(sum(disD)/len(disD))
-            #            if len(disA) == 0:
-            #                ipA.append(0)
-            #            else:
-            #                ipA.append(sum(disA)/len(disA))
-            #        ipD = np.array(ipD)
-            #        ipA = np.array(ipA)
-            #        dind=np.divide(ipA,ipD)
-            #
-            #        freq1=freq[dind != 0]
-            #        dind=dind[dind != 0]
-            #        dind_freq = dind/freq1
-            #        max_dind= np.max(dind_freq)
-            #        median_dind= np.median(dind_freq)
-
-            # fu_li Dstar
-            Ss2 = sum(np.sum(croms2, axis=0) == 1)  # of singletons
-
-            an = np.sum(np.divide(1.0, range(1, n_sam2)))
-            bn = np.sum(np.divide(1.0, np.power(range(1, n_sam2), 2)))
-            an1 = an + np.true_divide(1, n_sam2)
-
-            cn = (2 * (((n_sam2 * an) - 2 * (n_sam2 - 1))) / ((n_sam2 - 1) * (n_sam2 - 2)))
-            dn = (cn + np.true_divide((n_sam2 - 2), ((n_sam2 - 1) ** 2)) + np.true_divide(2, (n_sam2 - 1)) * (
-                        3.0 / 2 - (2 * an1 - 3) / (n_sam2 - 2) - 1.0 / n_sam2))
-
-            vds = (((n_sam2 / (n_sam2 - 1.0)) ** 2) * bn + (an ** 2) * dn - 2 * (n_sam2 * an * (an + 1)) / (
-                        (n_sam2 - 1.0) ** 2)) / (an ** 2 + bn)
-            uds = ((n_sam2 / (n_sam2 - 1.0)) * (an - n_sam2 / (n_sam2 - 1.0))) - vds
-
-            Dstar2 = ((n_sam2 / (n_sam2 - 1.0)) * n_pos2 - (an * Ss2)) / (uds * n_pos2 + vds * (n_pos2 ^ 2)) ** 0.5
-
-            # fu_li Fstar
-            vfs = (((2 * (n_sam2 ** 3.0) + 110.0 * (n_sam2 ** 2.0) - 255.0 * n_sam2 + 153) / (
-                        9 * (n_sam2 ** 2.0) * (n_sam2 - 1.0))) + ((2 * (n_sam2 - 1.0) * an) / (n_sam2 ** 2.0)) - (
-                               (8.0 * bn) / n_sam2)) / ((an ** 2.0) + bn)
-            ufs = ((n_sam2 / (n_sam2 + 1.0) + (n_sam2 + 1.0) / (3 * (n_sam2 - 1.0)) - 4.0 / (
-                        n_sam2 * (n_sam2 - 1.0)) + ((2 * (n_sam2 + 1.0)) / ((n_sam2 - 1.0) ** 2)) * (
-                                an1 - ((2.0 * n_sam2) / (n_sam2 + 1.0)))) / an) - vfs
-
-            Fstar2 = (pi_est2 - (((n_sam2 - 1.0) / n_sam2) * Ss2)) / ((ufs * n_pos2 + vfs * (n_pos2 ** 2.0)) ** 0.5)
-
-            # Zeng_E
-            thetaW = n_pos2 / an
-            thetaL = np.sum(np.multiply(S_i2, range(1, n_sam2))) / (n_sam2 - 1.0)
-            theta2 = (n_pos2 * (n_pos2 - 1.0)) / (an ** 2 + bn)
-
-            var1 = (n_sam2 / (2.0 * (n_sam2 - 1.0)) - 1.0 / an) * thetaW
-            var2 = theta2 * (bn / (an ** 2.0)) + 2 * bn * (n_sam2 / (n_sam2 - 1.0)) ** 2.0 - (
-                        2.0 * (n_sam2 * bn - n_sam2 + 1.0)) / ((n_sam2 - 1.0) * an) - (3.0 * n_sam2 + 1.0) / (
-                   (n_sam2 - 1.0))
-            varlw = var1 + var2
-
-            ZengE2 = (thetaL - thetaW) / (varlw) ** 0.5
-
-            # rageddness index
-            mist = []
-            for i in range(croms2.shape[0] - 1):
-                for j in range(i + 1, croms2.shape[0]):
-                    mist.append(sum(croms2[i, :] != croms2[j, :]))
-            mist = np.array(mist)
-            lnt = mist.shape[0]
-            fclass = []
-            for i in range(1, np.max(mist) + 2):
-                fclass.append((np.true_divide(sum(mist == i), lnt) - np.true_divide(sum(mist == (i - 1)), lnt)) ** 2)
-            rgd2 = np.sum(fclass)
-
-            # Haplotype_stats
-            hh2 = allel.garud_h(h2)
-            h12 = hh2[0]
-            h122 = hh2[1]
-            h1232 = hh2[2]
-            h2_h12 = hh2[3]
-            n_hap2 = np.unique(croms2, axis=0).shape[0]
-            hap_div2 = allel.haplotype_diversity(h2)
-
-            ehh2 = allel.ehh_decay(h2)
-            mean_ehh2 = np.mean(ehh2)
-            median_ehh2 = np.median(ehh2)
-
-            ihs2 = allel.ihs(h2, pos2, include_edges=True)
-            median_ihs2 = np.nanmedian(ihs2)
-            # NCD
-            n = n_pos2
-            tf = 0.5
-            ncd22 = (sum((freq2 - tf) ** 2) / n) ** 0.5
-            freq12 = freq2[freq2 < 1]
-            n1 = freq12.shape[0]
-            ncd12 = (sum((freq12 - tf) ** 2) / n1) ** 0.5
-
-            # nsl
-            nsl2 = allel.nsl(h2)
-            max_nsl2 = np.nanmax(nsl2)
-            median_nsl2 = np.nanmedian(nsl2)
-            # write on csv file
-            f = open(path2 + cl + '.csv', 'a+')
-            with f:
-                header = ['Class', 'Time', 'Iteration',
-                          'Mean(MeanPwiseDist)1',
-                          'Median(MeanPwiseDist)1',
-                          'Max(MeanPwiseDist)1',
-                          'Tajimas D1', 'Watterson1',
-                          'Mean(ObservedHet)1', 'Median(ObservedHet)1',
-                          'Max(ObservedHet)1', 'Mean(Obs/Exp Het)1',
-                          'Median(Obs/Exp Het)1', 'Max(Obs/Exp Het)1',
-                          'Median(r2)1',
-                          'H1_1', 'H12_1', 'H123_1', 'H2/H1_1', 'Haplotype Diversity1',
-                          '# of Hap1', 'Mean(EHH)1', 'Median(EHH)1',
-                          'Median(ihs)1', 'Max(nsl)1', 'Median(nsl)1',
-                          'NCD1_1', 'NCD2_1', 'KellyZns1', 'pi1', 'faywuH1',
-                          '#ofSingletons1', 'Dstar1', 'Fstar1', 'ZengE1', 'Rageddnes1',
-                          #
-                          'Mean(MeanPwiseDist)2',
-                          'Median(MeanPwiseDist)',
-                          'Max(MeanPwiseDist)2',
-                          'Tajimas D2', 'Watterson2',
-                          'Mean(ObservedHet)2', 'Median(ObservedHet)2',
-                          'Max(ObservedHet)2', 'Mean(Obs/Exp Het)2',
-                          'Median(Obs/Exp Het)2', 'Max(Obs/Exp Het)2',
-                          'Median(r2)',
-                          'H1_2', 'H12_2', 'H123_2', 'H2/H1_2', 'Haplotype Diversity_2',
-                          '# of Hap2', 'Mean(EHH)2', 'Median(EHH)2',
-                          'Median(ihs)2', 'Max(nsl)2', 'Median(nsl)2',
-                          'NCD1_2', 'NCD2_2', 'KellyZns2', 'pi2', 'faywuH2',
-                          '#ofSingletons2', 'Dstar2', 'Fstar2', 'ZengE2', 'Rageddnes2'
-                          #                                 'Max(DIND)', 'Median(DIND)',
-                          ]
-                writer = csv.DictWriter(f, fieldnames=header)
-                if once == 0:
-                    writer.writeheader()
-                    writer.writerow({'Class': str(cl), 'Iteration': str(r),
-                                     'Time': str(fname.split('_')[1]),
-                                     'Mean(MeanPwiseDist)1': mean_mean_pwise_dis1,
-                                     'Median(MeanPwiseDist)1': median_mean_pwise_dis1,
-                                     'Max(MeanPwiseDist)1': max_mean_pwise_dis1,
-                                     'Tajimas D1': TjD1, 'Watterson1': theta_hat_w1,
-                                     'Mean(ObservedHet)1': mean_obs_het1, 'Median(ObservedHet)1': median_obs_het1,
-                                     'Max(ObservedHet)1': max_obs_het1, 'Mean(Obs/Exp Het)1': mean_obs_exp1,
-                                     'Median(Obs/Exp Het)1': median_obs_exp1, 'Max(Obs/Exp Het)1': max_obs_exp1,
-                                     'Median(r2)1': median_r21,
-                                     'H1_1': h11, 'H12_1': h121, 'H123_1': h1231, 'H2/H1_1': h2_h11,
-                                     'Haplotype Diversity1': hap_div1,
-                                     '# of Hap1': n_hap1, 'Mean(EHH)1': mean_ehh1, 'Median(EHH)1': median_ehh1,
-                                     'Median(ihs)1': median_ihs1, 'Max(nsl)1': max_nsl1, 'Median(nsl)1': median_nsl1,
-                                     'NCD1_1': ncd11, 'NCD2_1': ncd21, 'KellyZns1': kellyzn1, 'pi1': pi_est1,
-                                     'faywuH1': Hstat1,
-                                     '#ofSingletons1': Ss1, 'Dstar1': Dstar1, 'Fstar1': Fstar1, 'ZengE1': ZengE1,
-                                     'Rageddnes1': rgd1,
-                                     #
-                                     'Mean(MeanPwiseDist)2': mean_mean_pwise_dis2,
-                                     'Median(MeanPwiseDist)': median_mean_pwise_dis2,
-                                     'Max(MeanPwiseDist)2': max_mean_pwise_dis2,
-                                     'Tajimas D2': TjD2, 'Watterson2': theta_hat_w2,
-                                     'Mean(ObservedHet)2': mean_obs_het2, 'Median(ObservedHet)2': median_obs_het2,
-                                     'Max(ObservedHet)2': max_obs_het2, 'Mean(Obs/Exp Het)2': mean_obs_exp2,
-                                     'Median(Obs/Exp Het)2': median_obs_exp2, 'Max(Obs/Exp Het)2': max_obs_exp2,
-                                     'Median(r2)': median_r2,
-                                     'H1_2': h12, 'H12_2': h122, 'H123_2': h1232, 'H2/H1_2': h2_h12,
-                                     'Haplotype Diversity_2': hap_div2,
-                                     '# of Hap2': n_hap2, 'Mean(EHH)2': mean_ehh2, 'Median(EHH)2': median_ehh2,
-                                     'Median(ihs)2': median_ihs2, 'Max(nsl)2': max_nsl2, 'Median(nsl)2': median_nsl2,
-                                     'NCD1_2': ncd12, 'NCD2_2': ncd22, 'KellyZns2': kellyzn2, 'pi2': pi_est2,
-                                     'faywuH2': Hstat2,
-                                     '#ofSingletons2': Ss2, 'Dstar2': Dstar2, 'Fstar2': Fstar2, 'ZengE2': ZengE2,
-                                     'Rageddnes2': rgd2
-                                     #                                 'Max(DIND)':max_dind, 'Median(DIND)':median_dind
-                                     })
-                    once = 1
-                else:
-                    writer.writerow({'Class': str(cl), 'Iteration': str(r),
-                                     'Time': str(fname.split('_')[1]),
-                                     'Mean(MeanPwiseDist)1': mean_mean_pwise_dis1,
-                                     'Median(MeanPwiseDist)1': median_mean_pwise_dis1,
-                                     'Max(MeanPwiseDist)1': max_mean_pwise_dis1,
-                                     'Tajimas D1': TjD1, 'Watterson1': theta_hat_w1,
-                                     'Mean(ObservedHet)1': mean_obs_het1, 'Median(ObservedHet)1': median_obs_het1,
-                                     'Max(ObservedHet)1': max_obs_het1, 'Mean(Obs/Exp Het)1': mean_obs_exp1,
-                                     'Median(Obs/Exp Het)1': median_obs_exp1, 'Max(Obs/Exp Het)1': max_obs_exp1,
-                                     'Median(r2)1': median_r21,
-                                     'H1_1': h11, 'H12_1': h121, 'H123_1': h1231, 'H2/H1_1': h2_h11,
-                                     'Haplotype Diversity1': hap_div1,
-                                     '# of Hap1': n_hap1, 'Mean(EHH)1': mean_ehh1, 'Median(EHH)1': median_ehh1,
-                                     'Median(ihs)1': median_ihs1, 'Max(nsl)1': max_nsl1, 'Median(nsl)1': median_nsl1,
-                                     'NCD1_1': ncd11, 'NCD2_1': ncd21, 'KellyZns1': kellyzn1, 'pi1': pi_est1,
-                                     'faywuH1': Hstat1,
-                                     '#ofSingletons1': Ss1, 'Dstar1': Dstar1, 'Fstar1': Fstar1, 'ZengE1': ZengE1,
-                                     'Rageddnes1': rgd1,
-                                     #
-                                     'Mean(MeanPwiseDist)2': mean_mean_pwise_dis2,
-                                     'Median(MeanPwiseDist)': median_mean_pwise_dis2,
-                                     'Max(MeanPwiseDist)2': max_mean_pwise_dis2,
-                                     'Tajimas D2': TjD2, 'Watterson2': theta_hat_w2,
-                                     'Mean(ObservedHet)2': mean_obs_het2, 'Median(ObservedHet)2': median_obs_het2,
-                                     'Max(ObservedHet)2': max_obs_het2, 'Mean(Obs/Exp Het)2': mean_obs_exp2,
-                                     'Median(Obs/Exp Het)2': median_obs_exp2, 'Max(Obs/Exp Het)2': max_obs_exp2,
-                                     'Median(r2)': median_r2,
-                                     'H1_2': h12, 'H12_2': h122, 'H123_2': h1232, 'H2/H1_2': h2_h12,
-                                     'Haplotype Diversity_2': hap_div2,
-                                     '# of Hap2': n_hap2, 'Mean(EHH)2': mean_ehh2, 'Median(EHH)2': median_ehh2,
-                                     'Median(ihs)2': median_ihs2, 'Max(nsl)2': max_nsl2, 'Median(nsl)2': median_nsl2,
-                                     'NCD1_2': ncd12, 'NCD2_2': ncd22, 'KellyZns2': kellyzn2, 'pi2': pi_est2,
-                                     'faywuH2': Hstat2,
-                                     '#ofSingletons2': Ss2, 'Dstar2': Dstar2, 'Fstar2': Fstar2, 'ZengE2': ZengE2,
-                                     'Rageddnes2': rgd2
-                                     #                                 'Max(DIND)':max_dind, 'Median(DIND)':median_dind
-                                     })
 
 
 class BaSe(object):
