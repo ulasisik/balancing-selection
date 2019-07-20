@@ -10,7 +10,7 @@ In order to change parameters of demographic model, mutation/recombination rate,
 The output file will be in MS file format containing 198 sampled chromosomes.
 
 ### BaSe
-__BaSe__ package contains required modules for preprocessing simulation outputs and for creating, evaluating and visualizing models.
+__BaSe__ (__Ba__\lancing __Se__\lection ) package contains required modules for preprocessing simulation outputs and for creating, evaluating and visualizing models.
 
 #### Summary Statistics and Images
 In order to calculate summary statistics, user should run `sim_to_stats.py` script located in `run` folder.  
@@ -21,7 +21,7 @@ This will generate XX.csv file for desired simulation scenario contaning summary
 Image size, number of simulations, sample size and sequence length can also be specified by modifying this script. 
 
 #### Creating Deep Neural Network and Model Evaluation
-`ann.py` and  `cnn.py` scripts can be run to create regular neural network and convolutional neural network models, respectively. The test will be performed should be specified in scripts:
+`ann.py` and  `cnn.py` scripts located in `run` folder can be run to create regular neural network and convolutional neural network models, respectively. The test will be performed should be specified in scripts:
 
 1. Neutral vs Selection(including IS, OD, and FD)
 2. Incomplete Sweep(IS) vs Balancing selection(OD and FD)
