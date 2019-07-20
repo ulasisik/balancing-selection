@@ -10,7 +10,7 @@ In order to change parameters of demographic model, mutation/recombination rate,
 The output file will be in MS file format containing 198 sampled chromosomes.
 
 ### BaSe
-__BaSe__ (__Ba__\lancing __Se__\lection ) package contains required modules for preprocessing simulation outputs and for creating, evaluating and visualizing models.
+__BaSe__ (abbreviation for BAlancing SElection ) package contains required modules for preprocessing simulation outputs and for creating, evaluating and visualizing models.
 
 #### Summary Statistics and Images
 In order to calculate summary statistics, user should run `sim_to_stats.py` script located in `run` folder.  
