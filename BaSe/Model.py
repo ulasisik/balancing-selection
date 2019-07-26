@@ -1,8 +1,9 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3
 """
 Contains required modules to create, train and evaluate deep neural network based classifier
 
 @author: ulas isildak
+@e-mail: isildak.ulas [at] gmail.com
 """
 import sys 
 sys.path.insert(0, '/mnt/NAS/projects/2018_deepLearn_selection/50kb/balancing-selection/scripts/BaSe') #path to BaSe package

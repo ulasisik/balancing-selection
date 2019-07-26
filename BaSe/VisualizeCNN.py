@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Visualizes decisions for trained CNN
 
-python version 3.6
-
-@author: ulas
+@author: ulas isildak
+@e-mail: isildak.ulas [at] gmail.com
 """
 
 import numpy as np

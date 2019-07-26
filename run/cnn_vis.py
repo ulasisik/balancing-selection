@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Visualizes CNN results
 
-@author: ulas
+@author: ulas isildak
+@e-mail: isildak.ulas [at] gmail.com
 """
 import sys                                                                                                             
-sys.path.insert(0, '/mnt/NAS/projects/2018_deepLearn_selection/50kb/balancing-selection/scripts') #path to BaSe package
+sys.path.insert(0, '/mnt/NAS/projects/2018_deepLearn_selection/50kb/balancing-selection/scripts') 
 
 from BaSe import vis_cnn
 
-X = "/mnt/NAS/projects/2018_deepLearn_selection/50kb/cnn/model/X_test_1.npy"
-y = "/mnt/NAS/projects/2018_deepLearn_selection/50kb/cnn/model/y_test_1.npy"
-model = "/mnt/NAS/projects/2018_deepLearn_selection/50kb/cnn/model/model_1.h5"
-image_size = (128,128)
-test = 1
-input_class = 'Neutral'
-
+X = "/mnt/NAS/projects/2018_deepLearn_selection/50kb/cnn/model/X_test.npy"
+y = "/mnt/NAS/projects/2018_deepLearn_selection/50kb/cnn/model/y_test.npy"
+model = "/mnt/NAS/projects/2018_deepLearn_selection/50kb/cnn/model/model.h5"
 path_to_figs = '/mnt/NAS/projects/2018_deepLearn_selection/50kb/cnn/figs/vis/'
+
+test = 1
+image_size = (128,128)
+input_class = 'Neutral'
 
 #Load test data and model; select Neutral class to visualize
 vis=vis_cnn.Vis(model, X, y, test, image_size, input_class=input_class)
