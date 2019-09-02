@@ -5,13 +5,10 @@ Contains required modules to create, train and evaluate deep neural network base
 @author: ulas isildak
 @e-mail: isildak.ulas [at] gmail.com
 """
-import sys 
-sys.path.insert(0, '/mnt/NAS/projects/2018_deepLearn_selection/50kb/balancing-selection/scripts/BaSe') #path to BaSe package
 
 import numpy as np
-
 import matplotlib
-matplotlib.use('Agg')   #or use ssh -X to connect to sever
+matplotlib.use('Agg')               #or use ssh -X to connect to sever
 import matplotlib.pyplot as plt
 
 from sklearn.metrics import confusion_matrix
@@ -389,43 +386,26 @@ class MakeCNN(MakeModel):
         
 class LoadCNN(MakeModel):
   
-    def __init__(self, test, selection_start):
+    def __init__(self, test):
         '''
         Loads compiled CNN model with tuned hyperparameters
         
         '''
         #params
         if test == 1:
-            lr_dec = 0.00001
-            if selection_start == 'all':
-                lr = 0.0005
-                dropout_fc = 0.8
-                dropout_conv = 0.5
-            else:
-                lr = 0.0001
-                dropout_fc = 0.5
-                dropout_conv = 0.5
+            lr = 0.0005
+            dropout_fc = 0.8
+            dropout_conv = 0.5
         elif test == 2:
-            lr_dec = 0.00001
-            if selection_start == 'all':
-                lr = 0.0005
-                dropout_fc = 0.8
-                dropout_conv = 0.5
-            else:
-                lr = 0.0001
-                dropout_fc = 0.5
-                dropout_conv = 0.5
+            lr = 0.0005
+            dropout_fc = 0.8
+            dropout_conv = 0.5
         elif test == 3:
-            lr_dec = 0.00001
-            if selection_start == 'all':
-                lr = 0.0005
-                dropout_fc = 0.8
-                dropout_conv = 0.5
-            else:
-                lr = 0.0001
-                dropout_fc = 0.8
-                dropout_conv = 0.5
+            lr = 0.0005
+            dropout_fc = 0.8
+            dropout_conv = 0.5
 
+        lr_dec = 0.00001
         filters = [32, 32, 32]
         input_shape = (128, 128, 1)
         units_fc = [128]
@@ -444,7 +424,7 @@ class LoadCNN(MakeModel):
         x = BatchNormalization()(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(pooling_size,pooling_size))(x)
-      #  x = Dropout(dropout_conv)(x)
+        # x = Dropout(dropout_conv)(x)
         
         #conv layer #2
         x = super().make_conv_block(input_tensor=x, filters=filters[1], kernel_size=kernel_size, 

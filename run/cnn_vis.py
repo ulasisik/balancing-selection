@@ -6,14 +6,14 @@ Visualizes CNN results
 @e-mail: isildak.ulas [at] gmail.com
 """
 import sys                                                                                                             
-sys.path.insert(0, '/mnt/NAS/projects/2018_deepLearn_selection/50kb/balancing-selection/scripts') 
+sys.path.insert(0, '/mnt/NEOGENE1/projects/deepLearn_selection_2018/balancing-selection')
 
 from BaSe import vis_cnn
 
-X = "/mnt/NAS/projects/2018_deepLearn_selection/50kb/cnn/model/X_test.npy"
-y = "/mnt/NAS/projects/2018_deepLearn_selection/50kb/cnn/model/y_test.npy"
-model = "/mnt/NAS/projects/2018_deepLearn_selection/50kb/cnn/model/model.h5"
-path_to_figs = '/mnt/NAS/projects/2018_deepLearn_selection/50kb/cnn/figs/vis/'
+X = "/mnt/NEOGENE1/projects/deepLearn_selection_2018/cnn/model/X_test.npy"
+y = "/mnt/NEOGENE1/projects/deepLearn_selection_2018/cnn/model/y_test.npy"
+model = "/mnt/NEOGENE1/projects/deepLearn_selection_2018/cnn/model/model.h5"
+path_to_figs = '/mnt/NEOGENE1/projects/deepLearn_selection_2018/cnn/figs/vis/'
 
 test = 1
 image_size = (128,128)

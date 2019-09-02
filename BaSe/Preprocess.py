@@ -10,11 +10,9 @@ import os
 import sys
 import csv
 import allel
-import itertools
 import numpy as np
 import pandas as pd
 from PIL import Image
-from glob import glob
 
 from sklearn.utils import shuffle
 from sklearn.decomposition import PCA
@@ -147,13 +145,11 @@ def sim_to_matrix(filename, NCHROMS, N, N_NE, sort, method):
         croms, positions = read_msms(filename, NCHROMS, N)
     
     if method == "s":
-        print("Sorting seperately")
         pos = np.where(np.abs(positions - N/2) < 1)[0]
         if len(pos) > 1:
             print("Target SNP found at multiple positions:")
             print(positions[pos])
             pos = np.array([pos[0]], dtype='int64')
-        print(pos)
         if len(pos) == 1:
             index_1 = (croms[:, pos] == 1).reshape(NCHROMS, )
             index_0 = (croms[:, pos] == 0).reshape(NCHROMS, )
@@ -177,7 +173,6 @@ def sim_to_matrix(filename, NCHROMS, N, N_NE, sort, method):
             print(positions[pos])
             raise IndexError("Target SNP found at multiple positions")
     elif method == "t":
-        print("Sorting together")
         if sort == "gen_sim":
             croms = sort_min_diff(croms)
         elif sort == "freq":
@@ -234,7 +229,7 @@ def matrix_to_image(croms, n_row, n_col, flip='none'):
         return im_resized, im_lr, im_ud, im_lrud
 
 
-def sim_to_image(path_sim, path_image, REP_FROM, REP_TO, NCHROMS, N, N_NE, img_dim=(128,128), clss=("NE", "IS", "OD", "FD"), sort="gen_sim", method="s"):
+def sim_to_image(path_sim, path_image, REP_FROM, REP_TO, NCHROMS, N, N_NE, img_dim=(128,128), clss=("NE", "IS", "OD", "FD"), sort="freq", method="s"):
     """
     Converts msms simulation output files into images
     Args:
@@ -281,77 +276,6 @@ def sim_to_image(path_sim, path_image, REP_FROM, REP_TO, NCHROMS, N, N_NE, img_d
             im_resized.save("{}{}.bmp".format(path_image, file.name.replace(".txt", "")))
 
 
-
-def image_to_array(path_image, path_array, REP_TO, img_dim = (128,128)):
-    """
-    Convert images into numpy arrays and save
-    Args:
-        path_image: path to the folder containing images
-        path_array: path to a folder in which output arrays will be saved
-        REP_TO: number of simulations, until
-        img_dim: image dimensions as (nrow, ncol)
-
-    """
-    REP_FROM = 1
-    files = [f for f in os.scandir(path_image) if f.is_file() if f.name.endswith(".bmp")]
-
-    #Neutral
-    im_ne = [file.path for file in files
-             if file.name.startswith("NE")
-             if int(file.name.replace(".bmp","").split("_")[-1]) in range(REP_FROM, REP_TO+1)]
-
-    im_ne_matrix = np.empty((len(im_ne), img_dim[0] * img_dim[1]), dtype='float32')
-    for i, im in enumerate(im_ne):
-        image = np.asarray(Image.open(im)).flatten()
-        image = image.astype('float32')
-        im_ne_matrix[i, :] = image
-
-    np.save("{}NE_{}.npy".format(path_array, REP_TO), im_ne_matrix, allow_pickle=False)
-
-    #Selection
-    for ss in [20, 25, 30, 35, 40]:
-        for cl in ['IS', 'OD', 'FD']:
-            im_s = [file.path for file in files
-                  if file.name.startswith(cl)
-                  if int(file.name.replace(".bmp","").split("_")[-1]) in range(REP_FROM, REP_TO+1)
-                  if int(file.name.replace(".bmp","").split("_")[1]) == ss]
-
-            im_s_matrix = np.empty((len(im_s), img_dim[0] * img_dim[1]), dtype='float32')
-
-            for i, im in enumerate(im_s):
-                image = np.asarray(Image.open(im)).flatten()
-                image = image.astype('float32')
-                im_s_matrix[i, :] = image
-            np.save("{}{}_{}_{}.npy".format(path_array, cl, ss, REP_TO), im_s_matrix, allow_pickle=False)
-
-
-def load_npys(files):
-    """
-    Loads multiple numpy arrays and combines them.
-    Args:
-        files: list of npy files including full paths
-    Returns:
-        A combined numpy array.
-    """
-    mat_list = []
-    for file in files:
-        mat = np.load(file)
-        mat_list.append(mat)
-
-    rows = min(i.shape[0] for i in mat_list)
-    cols = max(i.shape[1] for i in mat_list)
-    mat = np.empty((rows * len(mat_list), cols), dtype='float32')
-
-    counter = 0
-    for i in range(0, rows):
-        for j, m in enumerate(mat_list):
-            # print("mat[{},:]= mat_list[{}][{},:]".format(counter, j, i))
-            mat[counter, :] = m[i, :]
-            counter = counter + 1
-
-    return mat
-
-
 def calc_median_r2(g):
     """Calculates median LD r^2"""
     gn = g.to_n_alt(fill=-1)
@@ -396,6 +320,7 @@ def calc_faywu_h(croms):
     Hstat1 = thetaP1 - thetaH1
     return Hstat1
 
+
 def calc_fuli_f_star(croms):
     """Calculates Fu and Li's D* statistic"""
     n_sam1 = croms.shape[0]
@@ -416,6 +341,7 @@ def calc_fuli_f_star(croms):
     Fstar1 = (pi_est - (((n_sam1 - 1.0) / n_sam1) * ss)) / ((ufs * n_pos1 + vfs * (n_pos1 ** 2.0)) ** 0.5)
     return Fstar1
 
+
 def calc_fuli_d_star(croms):
     """Calculates Fu and Li's D* statistic"""
     n_sam1 = croms.shape[0]
@@ -435,6 +361,7 @@ def calc_fuli_d_star(croms):
     ss = sum(np.sum(croms, axis=0) == 1)
     Dstar1 = ((n_sam1 / (n_sam1 - 1.0)) * n_pos1 - (an * ss)) / (uds * n_pos1 + vds * (n_pos1 ^ 2)) ** 0.5
     return Dstar1
+
 
 def calc_zeng_e(croms):
     """Calculates Zeng et al's E statistic"""
@@ -459,6 +386,7 @@ def calc_zeng_e(croms):
     ZengE1 = (thetaL - thetaW) / (varlw) ** 0.5
     return ZengE1
 
+
 def calc_rageddness(croms):
     """Calculates rageddness index"""
     mist = []
@@ -472,6 +400,7 @@ def calc_rageddness(croms):
         fclass.append((np.true_divide(sum(mist == i), lnt) - np.true_divide(sum(mist == (i - 1)), lnt)) ** 2)
     rgd1 = np.sum(fclass)
     return rgd1
+
 
 def sum_stat(path_to_sim, path_to_stat, cls, NCHROMS, REP_FROM, REP_TO, N, N_NE):
     '''
@@ -811,27 +740,28 @@ def sum_stat(path_to_sim, path_to_stat, cls, NCHROMS, REP_FROM, REP_TO, N, N_NE)
                                  'Rageddnes2': rgd2})
 
 
-
 class BaSe(object):
     '''
-    Distinguishing between balancing selection and incomplete sweep. Includes
-    three possible tests:
+    Distinguishing between balancing selection and incomplete sweep.
+    Includes three possible tests:
         test 1: neutrality vs selection
         test 2: incomplete sweep vs balancing selection
         test 3: overdominance vs negative frequency-dependent selection
     '''
     
-    def __init__(self, test, R, selection_start = 'all'):
+    def __init__(self, test, selection_category, N):
         '''
         Args:
             test: test number to be performed, either 1, 2, or 3.
-            R: number of simulations that will be included per class.
-            selection_start_times: selection start times that will be included for selection scenarios.
-                                if 'all' (default), all different scenarios will be included.
+            N: sample size for each class.
+            selection_category: specifies the time of onset of selection for selection scenarios. Possible bins:
+                recent: includes selection scenarios ranging from 20k to 26k years old.
+                medium: includes selection scenarios ranging from 27k to 33k years old.
+                old: includes selection scenarios ranging from 34k to 40k years old.
         '''
         
         if test not in [1, 2, 3]:
-            raise IndexError("Test number must be 1, 2, or 3")
+            raise ValueError("Test number must be 1, 2, or 3")
         else:
             self.test = test
             if test == 1:
@@ -844,12 +774,12 @@ class BaSe(object):
                 self.classes = ['OD', 'FD']
                 self.labels = ['OD', 'FD']
                 
-        if selection_start not in ['all', 20, 25, 30, 35, 40]:
-            raise ValueError("Selection start times '{}' is not defined".format(selection_start))
+        if selection_category not in ['recent', 'medium', 'old']:
+            raise ValueError("'{}' is not defined.".format(selection_category))
         else:
-            self.selection_start = selection_start
-        self.R = R
-                
+            self.selection_category = selection_category
+        self.N = N
+
             
 class Images(BaSe):
     '''
@@ -857,21 +787,22 @@ class Images(BaSe):
     classifier.
     '''
     
-    def __init__(self, test, R, image_size, selection_start):
+    def __init__(self, test, selection_category, N, image_size):
         '''
         Args:
             test: test number to be performed, either 1, 2, or 3.
-            R: number of simulations that will be included per class.
-            selection_start_times: selection start times that will be included for selection scenarios.
-                                if 'all' (default), all different scenarios will be included.
+            selection_category: specifies the time of onset of selection for selection scenarios. Possible bins:
+                            recent: includes selection scenarios ranging from 20k to 26k years old.
+                            medium: includes selection scenarios ranging from 27k to 33k years old.
+                            old: includes selection scenarios ranging from 34k to 40k years old.
+            N: number of simulations that will be included per class.
             image size (tuple) -- dimensions of input images in the format of (nrow, ncol)
                                 
         '''
-        super().__init__(test, R, selection_start)
+        super().__init__(test, selection_category, N)
         self.image_row = image_size[0]
         self.image_col = image_size[1]
-        
-        
+
     def load_images(self, path_to_images):
         """"
         Loads images.
@@ -883,39 +814,41 @@ class Images(BaSe):
             x_training, x_valitation, y_training, y_valitation
  
         """
-        if self.selection_start == "all":
-            ss = [20, 25, 30, 35, 40]
-        else:
-            ss = [self.selection_start]
+        if self.selection_category == "recent":
+            ss = [i for i in range(20, 27)]
+        elif self.selection_category == "medium":
+            ss = [i for i in range(27, 34)]
+        elif self.selection_category == "old":
+            ss = [i for i in range(34, 41)]
+        print('Times of onset of selection for selection scenarios: {}'.format(ss))
 
         files = [f for f in os.scandir(path_to_images) if f.is_file() if f.name.endswith(".bmp")]
         im_ne = [file.path for file in files
                  if file.name.startswith("NE")
-                 if int(file.name.replace(".bmp", "").split("_")[-1]) in range(1, self.R + 1)]
+                 if int(file.name.replace(".bmp", "").split("_")[-1]) in range(1, self.N + 1)]
         im_is = [file.path for file in files
                  if file.name.startswith("IS")
-                 if int(file.name.replace(".bmp", "").split("_")[-1]) in range(1, self.R + 1)
+                 if int(file.name.replace(".bmp", "").split("_")[-1]) in range(1, self.N + 1)
                  if int(file.name.replace(".bmp", "").split("_")[1]) in ss]
         im_od = [file.path for file in files
                  if file.name.startswith("OD")
-                 if int(file.name.replace(".bmp", "").split("_")[-1]) in range(1, self.R + 1)
+                 if int(file.name.replace(".bmp", "").split("_")[-1]) in range(1, self.N + 1)
                  if int(file.name.replace(".bmp", "").split("_")[1]) in ss]
         im_fd = [file.path for file in files
                  if file.name.startswith("FD")
-                 if int(file.name.replace(".bmp", "").split("_")[-1]) in range(1, self.R + 1)
+                 if int(file.name.replace(".bmp", "").split("_")[-1]) in range(1, self.N + 1)
                  if int(file.name.replace(".bmp", "").split("_")[1]) in ss]
 
         if self.test == 1:
-            m_ne = im_ne[0:self.R]
+            m_ne = im_ne[0:self.N]
             m_is = [f for f in im_is
-                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int((self.R / 3) / len(ss)) + 1)]
+                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int((self.N / 3) / len(ss)) + 1)]
             m_od = [f for f in im_od
-                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int((self.R / 3) / len(ss)) + 1)]
+                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int((self.N / 3) / len(ss)) + 1)]
             m_fd = [f for f in im_fd
-                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int((self.R / 3) / len(ss)) + 1)]
+                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int((self.N / 3) / len(ss)) + 1)]
 
             listing = m_ne + m_is + m_od + m_fd
-            print(listing)
             print('Total sample sizes:\nNeutral: {}\n'
                   'Selection: {} = {}(IS) + {}(FD) + {}(OD) '.format(len(m_ne),
                                                                      (len(m_is) + len(m_od) + len(m_fd)),
@@ -923,14 +856,13 @@ class Images(BaSe):
 
         elif self.test == 2:
             m_is = [f for f in im_is
-                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int(self.R / len(ss)) + 1)]
+                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int(self.N / len(ss)) + 1)]
             m_od = [f for f in im_od
-                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int((self.R / 2) / len(ss)) + 1)]
+                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int((self.N / 2) / len(ss)) + 1)]
             m_fd = [f for f in im_fd
-                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int((self.R / 2) / len(ss)) + 1)]
+                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int((self.N / 2) / len(ss)) + 1)]
 
             listing = m_is + m_od + m_fd
-            print([lis.split("/")[-1] for lis in listing])
             print('Total sample sizes:\nIncomplete sweep: {}\n'
                   'Balancing selection: {} = {}(FD) + {}(OD) '.format(len(m_is),
                                                                       (len(m_od) + len(m_fd)),
@@ -938,18 +870,17 @@ class Images(BaSe):
 
         elif self.test == 3:
             m_od = [f for f in im_od
-                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int(self.R / len(ss)) + 1)]
+                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int(self.N / len(ss)) + 1)]
             m_fd = [f for f in im_fd
-                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int(self.R / len(ss)) + 1)]
+                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int(self.N / len(ss)) + 1)]
+
             listing = m_od + m_fd
-            print(listing)
-            print('Total sample sizes:\nOverdominance: {}\nNeg. freq-dependent selection: {}'.format(len(m_od), len(m_fd)))
+            print('Total sample sizes:\nOverdominance: {}\nNeg. freq-dependent selection: {}'.format(len(m_od),
+                                                                                                     len(m_fd)))
 
         im_matrix_rows = len(listing)
         im_matrix_cols = self.image_row * self.image_col
         im_matrix = np.empty((im_matrix_rows, im_matrix_cols), dtype='float32')
-
-
 
         for i, im in enumerate(listing):
             image = np.asarray(Image.open(im)).flatten()
@@ -962,80 +893,6 @@ class Images(BaSe):
         im_matrix, labels = shuffle(im_matrix, labels, random_state=2)
         X_train, X_val, y_train, y_val = train_test_split(im_matrix, labels, test_size=0.2, random_state=4)
 
-        #reshaping, normalizing, convert to categorical data, save
-        CHANNELS = 1
-        X_train = X_train.reshape(X_train.shape[0], self.image_row, self.image_col, CHANNELS)
-        X_val = X_val.reshape(X_val.shape[0], self.image_row, self.image_row, CHANNELS)
-
-        X_train /= 255
-        X_val /= 255
-
-        return X_train, X_val, y_train, y_val
-
-
-    def load_image_arrays(self, path_array):
-        """
-        Loads images from numpy arrays saved by 'image_to_array()' function.
-        Args:
-            path_array: path to the folder containing numpy arrays
-        Returns:
-            x_training, x_valitation, y_training, y_valitation
-
-        """
-
-        if self.selection_start == "all":
-            ss = [20, 25, 30, 35, 40]
-        else:
-            ss = [self.selection_start]
-
-        files = [f for f in os.scandir(path_array) if f.is_file() if f.name.endswith(".npy")]
-
-        files_ne = [file.path for file in files
-                    if file.name.startswith("NE")]
-        files_is = [file.path for file in files
-                    if file.name.startswith("IS")
-                    if int(file.name.replace(".npy", "").split("_")[1]) in ss]
-        files_od = [file.path for file in files
-                    if file.name.startswith("OD")
-                    if int(file.name.replace(".npy", "").split("_")[1]) in ss]
-        files_fd = [file.path for file in files
-                    if file.name.startswith("FD")
-                    if int(file.name.replace(".npy", "").split("_")[1]) in ss]
-
-        matrix_ne = load_npys(files_ne)
-        matrix_is = load_npys(files_is)
-        matrix_od = load_npys(files_od)
-        matrix_fd = load_npys(files_fd)
-
-        im_matrix = np.empty((self.R * 2, self.image_row * self.image_col), dtype='float32')
-        if self.test == 1:
-            if self.R % 3 != 0:
-                raise IndexError(
-                    'R must be a multiple of 3 for test 1, as R/3 samples will be included for selection scenarios')
-            im_matrix[0:self.R, ] = matrix_ne[0:self.R, ]
-            im_matrix[self.R:int(self.R + self.R / 3), ] = matrix_is[0:int(self.R / 3), ]
-            im_matrix[int(self.R + self.R / 3):int(self.R + 2 * self.R / 3), ] = matrix_od[0:int(self.R / 3), ]
-            im_matrix[int(self.R + 2 * self.R / 3):self.R * 2, ] = matrix_fd[0:int(self.R / 3), ]
-        elif self.test == 2:
-            if self.R % 2 != 0:
-                raise IndexError(
-                    'R must be a multiple of 2 for test 2, as R/2 samples will be included for balancing selection scenarios')
-            im_matrix[0:self.R, ] = matrix_is[0:self.R, ]
-            im_matrix[self.R:int(self.R + self.R / 2), ] = matrix_od[0:int(self.R / 2), ]
-            im_matrix[int(self.R + self.R / 2):self.R * 2, ] = matrix_fd[0:int(self.R / 2), ]
-        elif self.test == 3:
-            im_matrix[0:self.R, ] = matrix_od[0:self.R, ]
-            im_matrix[self.R:self.R * 2, ] = matrix_fd[0:self.R]
-
-        labels = np.zeros((im_matrix.shape[0],), dtype=int)
-        labels[(im_matrix.shape[0] // 2):] = 1
-
-        im_matrix, labels = shuffle(im_matrix, labels, random_state=2)
-        X_train, X_val, y_train, y_val = train_test_split(im_matrix, labels, test_size=0.2, random_state=4)
-
-        print('Total sample sizes:\n{}: {}\n{}: {}'.format(self.classes[0], int(im_matrix.shape[0] / 2),
-                                                     self.classes[1], int(im_matrix.shape[0] / 2)))
-
         # reshaping, normalizing, convert to categorical data, save
         CHANNELS = 1
         X_train = X_train.reshape(X_train.shape[0], self.image_row, self.image_col, CHANNELS)
@@ -1045,25 +902,27 @@ class Images(BaSe):
         X_val /= 255
 
         return X_train, X_val, y_train, y_val
-    
+
 
 class SumStats(BaSe):
     '''
     Load and preprocess summary statistics that will be used to train NeuralNet
     '''
     
-    def __init__(self, test, R, selection_start):
+    def __init__(self, test, selection_category, N):
         '''
         Args:
             test: test number to be performed, either 1, 2, or 3.
-            R: number of simulations that will be included per class.
-            selection_start_times: selection start times that will be included for selection scenarios.
-                                if 'all' (default), all different scenarios will be included.                    
+            selection_category: specifies the time of onset of selection for selection scenarios. Possible bins:
+                recent: includes selection scenarios ranging from 20k to 26k years old.
+                medium: includes selection scenarios ranging from 27k to 33k years old.
+                old: includes selection scenarios ranging from 34k to 40k years old.
+            N: number of simulations that will be included per class.
+
         '''
-        super().__init__(test, R, selection_start)
-        
-    
-    def load_sumstats(self, path_to_stats, scale = True, pca = True):
+        super().__init__(test, selection_category, N)
+
+    def load_sumstats(self, path_to_stats, scale=True, pca=True):
         '''
         Loads and preprocess summary statistics. Preprocessing includes dealing 
         with missing values, shuffling, spliting them into training and valitation 
@@ -1080,35 +939,56 @@ class SumStats(BaSe):
         Returns:
             x_training, x_valitation, y_training, y_valitation
         '''
-        f1=pd.read_csv(path_to_stats+"FD.csv")
-        f2=pd.read_csv(path_to_stats+"OD.csv")
-        f3=pd.read_csv(path_to_stats+"IS.csv")
-        f4=pd.read_csv(path_to_stats+"NE.csv")
-        
-        if self.selection_start != 'all':
-            f1 = f1.loc[f1.iloc[:,1] == self.selection_start,:]
-            f2 = f2.loc[f2.iloc[:,1] == self.selection_start,:]
-            f3 = f3.loc[f3.iloc[:,1] == self.selection_start,:]
-        
+        f1 = pd.read_csv(path_to_stats + "FD.csv")
+        f2 = pd.read_csv(path_to_stats + "OD.csv")
+        f3 = pd.read_csv(path_to_stats + "IS.csv")
+        f4 = pd.read_csv(path_to_stats + "NE.csv")
+
+        if self.selection_category == "recent":
+            ss = [i for i in range(20, 27)]
+        elif self.selection_category == "medium":
+            ss = [i for i in range(27, 34)]
+        elif self.selection_category == "old":
+            ss = [i for i in range(34, 41)]
+        print('Times of onset of selection for selection scenarios: {}'.format(ss))
+
+        f1 = f1.iloc[[i for i, j in enumerate(f1.iloc[:, 1]) if j in ss], :]
+        f2 = f2.iloc[[i for i, j in enumerate(f2.iloc[:, 1]) if j in ss], :]
+        f3 = f3.iloc[[i for i, j in enumerate(f3.iloc[:, 1]) if j in ss], :]
+
         if self.test == 1:
-            f4=f4.iloc[0:self.R,]
-            sseach=f4.shape[0]/3
-            f1 = f1.iloc[0:int(sseach),]
-            f2 = f2.iloc[0:int(sseach),]
-            f3 = f3.iloc[0:int(sseach),]
-            data=f3.append(f1.append(f2))
-            data.iloc[:,0:1] = 'S'
-            data=f4.append(data)
+            f4 = f4.iloc[0:self.N, ]
+            sseach = f4.shape[0] / 3
+            f1 = f1.iloc[0:int(sseach), ]
+            f2 = f2.iloc[0:int(sseach), ]
+            f3 = f3.iloc[0:int(sseach), ]
+            data = f3.append(f1.append(f2))
+            data.iloc[:, 0:1] = 'S'
+            data = f4.append(data)
+            print('Total sample sizes:\nNeutral: {}\n'
+                  'Selection: {} = {}(IS) + {}(FD) + {}(OD) '.format(f4.shape[0],
+                                                                     (f3.shape[0] + f2.shape[0] + f1.shape[0]),
+                                                                     f3.shape[0], f2.shape[0], f1.shape[0]))
+
         elif self.test == 2:
-            f3=f3.iloc[0:self.R*7,]
-            sseach=f3.shape[0]/2
-            f1 = f1.iloc[0:int(sseach),]
-            f2 = f2.iloc[0:int(sseach),]
-            data=f1.append(f2)
-            data.iloc[:,0:1] = 'BS'
-            data=f3.append(data)
+            f3 = f3.iloc[0:self.N, ]
+            sseach = f3.shape[0] / 2
+            f1 = f1.iloc[0:int(sseach), ]
+            f2 = f2.iloc[0:int(sseach), ]
+            data = f1.append(f2)
+            data.iloc[:, 0:1] = 'BS'
+            data = f3.append(data)
+            print('Total sample sizes:\nIncomplete sweep: {}\n'
+                  'Balancing selection: {} = {}(FD) + {}(OD) '.format(f3.shape[0],
+                                                                      (f2.shape[0] + f1.shape[0]),
+                                                                      f2.shape[0], f1.shape[0]))
+
         elif self.test == 3:
-            data=f1.append(f2)
+            f1 = f1.iloc[0:self.N, :]
+            f2 = f2.iloc[0:self.N, :]
+            data = f1.append(f2)
+            print('Total sample sizes:\nOverdominance: {}\nNeg. freq-dependent selection: {}'.format(f2.shape[0],
+                                                                                                     f1.shape[0]))
             
         stat_matrix=data.iloc[:,3:].values
         y=data.iloc[:,0].values

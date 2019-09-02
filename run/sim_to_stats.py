@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3
 """
 Calculates summary statistics from simulations
 
@@ -6,17 +6,17 @@ Calculates summary statistics from simulations
 """
 
 import sys
-sys.path.insert(0, '/Users/ulas/Projects/BS_DeepLearning/balancing-selection')
+sys.path.insert(0, '/mnt/NEOGENE1/projects/deepLearn_selection_2018/balancing-selection')
 
 from BaSe.Preprocess import sum_stat
 
-path_to_sim = '/Users/ulas/Projects/BS_DeepLearning/raw_data/'
-path_to_stats = '/Users/ulas/Projects/BS_DeepLearning/stats/'
+path_to_sim = '/mnt/NEOGENE1/projects/deepLearn_selection_2018/results/decompMSMS/'
+path_to_stats = '/mnt/NEOGENE1/projects/deepLearn_selection_2018/results/stats/'
 
 N = 50000  # length of simulated sequence (selection scenarios)
 N_NE = 500000 # length of simulated sequence (neutral)
 NCHROMS = 198
-REP_TO = 10
+REP_TO = 1000
 REP_FROM = 1
 
 for cls in ["NE", "IS", "OD", "FD"]:
