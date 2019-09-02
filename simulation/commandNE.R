@@ -1,6 +1,6 @@
 args <- commandArgs(T)
 
-source("/mnt/NEOGENE1/projects/deepLearn_selection_2018/50kb/scripts/simulations/simFunc.R")
+source("/mnt/NEOGENE1/projects/deepLearn_selection_2018/balancing-selection/simulation/simFunc.R")
 
 s = as.numeric(args[1])  #sample 100 diploid individual
 h = as.numeric(args[2])

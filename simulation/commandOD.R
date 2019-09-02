@@ -1,6 +1,6 @@
 args <- commandArgs(T)
 
-source("/mnt/NEOGENE1/projects/deepLearn_selection_2018/50kb/scripts/simulations/simFunc.R")
+source("/mnt/NEOGENE1/projects/deepLearn_selection_2018/balancing-selection/simulation/simFunc.R")
 
 gene_time = 29 #generation time (Tremblay and Vézina 2000)
 start_time = 602000 #start 1000 generation (~25 kya) before first event(which is increase N)
@@ -115,7 +115,7 @@ for(i in start:r){
             'cat("Freq:");',
             'print(freqs);',
             'print("SIMULATION END");',
-            'p2.outputMSSample([N_end], replace = F, filePath="/mnt/NEOGENE1/projects/deepLearn_selection_2018/50kb/results/decompMSMS/OD_[TS]_[h]_[r].txt");',
+            'p2.outputMSSample([N_end], replace = F, filePath="/mnt/NEOGENE1/projects/deepLearn_selection_2018/50kb/results/decompMSMS/OD_[TS]_[r].txt");',
             'deleteFile("/tmp/slim_" + simID + ".txt");',
             '}',
             '}', 

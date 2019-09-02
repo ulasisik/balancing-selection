@@ -1,6 +1,6 @@
 args <- commandArgs(T)
 
-source("/mnt/NEOGENE1/projects/deepLearn_selection_2018/50kb/scripts/simulations/simFunc.R")
+source("/mnt/NEOGENE1/projects/deepLearn_selection_2018/balancing-selection/simulation/simFunc.R")
 
 s = as.numeric(args[1])  #sample 100 diploid individual
 h = as.numeric(args[2])
@@ -115,7 +115,7 @@ for (i in start:r){
             'cat("Freq:");',
             'print(freqs);',
             'print("SIMULATION END");',
-            'p2.outputMSSample([N_end], replace = F, filePath="/mnt/NEOGENE1/projects/deepLearn_selection_2018/50kb/results/decompMSMS/IS_[TS]_[s]_[r].txt");',
+            'p2.outputMSSample([N_end], replace = F, filePath="/mnt/NEOGENE1/projects/deepLearn_selection_2018/50kb/results/decompMSMS/IS_[TS]_[r].txt");',
             'deleteFile("/tmp/slim_" + simID + ".txt");',
             '}',
             '}', 
