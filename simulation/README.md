@@ -21,7 +21,7 @@ For incomplete sweep, we set dominance coefficient _h_ = 0.5 and used selection 
 | Selection Start Time (kya)  | Selection Coefficient (_s_) |
 | ------------- | ------------- |
 |20| 0.019|
-|21|0.018|
+|21| 0.018|
 |22| 0.017|
 |23| 0.016|
 |24| 0.016|
@@ -43,5 +43,64 @@ For incomplete sweep, we set dominance coefficient _h_ = 0.5 and used selection 
 |40| 0.0064|
 
 ### Overdominance
+
+To simulate overdominance model, we set _s_ = 0.001 and used following dominance coefficient _h_ values:
+
+| Selection Start Time (kya)  | Dominance Coefficient (_h_) |
+| ------------- | ------------- |
+|20| 20|
+|21| 19|
+|22| 18|
+|23| 17|
+|24| 16|
+|25| 14|
+|26| 14|
+|27| 13|
+|28| 12|
+|29| 11|
+|30| 10|
+|31| 10|
+|32| 9.5|
+|33| 9|
+|34| 8.5|
+|35| 8|
+|36| 7.5|
+|37| 7|
+|38| 6.5|
+|39| 6|
+|40| 6|
+
+## Negative Frequency Dependent Selection
+
+In order to simulate negative frequency dependent selection, we introduced the _fitness()_ callback as it can assign different fitness to the same polymorphism. In each generation, the relative fitness of the target polymorphism (mut) is calculated as follows:
+
+- Relative Fitness<sub>i</sub>(mut) = _A_ - _B_ * Freq<sub>i</sub>(mut)
+
+We used following _A_ and _B_ values to simulate negative frequency dependent selection:
+
+| Selection Start Time (kya)  | _A_ | _B_ |
+| ------------- | ------------- | ------------- |
+|20| 1.030| 0.060|
+|21| 1.029| 0.058|
+|22| 1.028| 0.056|
+|23| 1.027| 0.054|
+|24| 1.026| 0.052|
+|25| 1.025| 0.050|
+|26| 1.024| 0.048|
+|27| 1.023| 0.046|
+|28| 1.022| 0.044|
+|29| 1.021| 0.042|
+|30| 1.020| 0.040|
+|31| 1.019| 0.038|
+|32| 1.018| 0.036|
+|33| 1.017| 0.034|
+|34| 1.016| 0.032|
+|35| 1.015| 0.030|
+|36| 1.014| 0.028|
+|37| 1.013| 0.026|
+|38| 1.012| 0.024|
+|39| 1.011| 0.022|
+|40| 1.010| 0.020|
+
 
 
