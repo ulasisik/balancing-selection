@@ -146,11 +146,16 @@ def sim_to_matrix(filename, NCHROMS, N, N_NE, sort, method):
     
     if method == "s":
         pos = np.where(np.abs(positions - N/2) < 1)[0]
-        if len(pos) > 1:
+        if len(pos) == 0:
+            print(filename)
+            print(positions)
+            raise IndexError("Target SNP not found")
+        elif len(pos) > 1:
             print("Target SNP found at multiple positions:")
             print(positions[pos])
             pos = np.array([pos[0]], dtype='int64')
-        if len(pos) == 1:
+            print(filename)
+        elif len(pos) == 1:
             index_1 = (croms[:, pos] == 1).reshape(NCHROMS, )
             index_0 = (croms[:, pos] == 0).reshape(NCHROMS, )
             croms_1 = croms[index_1, :]
@@ -164,14 +169,6 @@ def sim_to_matrix(filename, NCHROMS, N, N_NE, sort, method):
             else:
                 raise ValueError("sort must be either 'freq' or 'gen_sim'")
             croms = np.concatenate((croms0, croms1), axis=0)
-        elif len(pos) == 0:
-            print(filename)
-            print(positions)
-            raise IndexError("Target SNP not found")
-        elif len(pos) > 1:
-            print("positions: ")
-            print(positions[pos])
-            raise IndexError("Target SNP found at multiple positions")
     elif method == "t":
         if sort == "gen_sim":
             croms = sort_min_diff(croms)
