@@ -875,6 +875,14 @@ class Images(BaSe):
             print('Total sample sizes:\nOverdominance: {}\nNeg. freq-dependent selection: {}'.format(len(m_od),
                                                                                                      len(m_fd)))
 
+        counter_list = [l.split("/")[-1].split("_")[0] + "_" + l.split("/")[-1].split("_")[1] for l in listing
+                        if not l.split("/")[-1].startswith("NE")]
+        counter_dict = dict((x, counter_list.count(x)) for x in set(counter_list))
+
+        print("\nSample sizes for each selection start time:")
+        for s in sorted(counter_dict):
+            print(s.split("_")[0], 'for', s.split("_")[1], 'k years old selection: ', counter_dict[s])
+
         im_matrix_rows = len(listing)
         im_matrix_cols = self.image_row * self.image_col
         im_matrix = np.empty((im_matrix_rows, im_matrix_cols), dtype='float32')
