@@ -430,8 +430,21 @@ def sum_stat(path_to_sim, path_to_stat, cls, NCHROMS, REP_FROM, REP_TO, N, N_NE)
              if file.name.startswith(cls)
              if int(file.name.replace(".txt", "").split("_")[-1]) in range(REP_FROM, REP_TO + 1)]
 
+    if cls == "NE":
+        counter_ne = [f for f in files if f.name.startswith("NE")]
+        print("Sample size of neutral scenario: {}".format(len(counter_ne)))
+    elif cls in ("IS", "OD", "FD"):
+        counter_list = [f.name.split("_")[0] + "_" + f.name.split("_")[1] for f in files
+                        if not f.name.startswith("NE")]
+        counter_dict = dict((x, counter_list.count(x)) for x in set(counter_list))
+
+        print("\nNumber of samples for each selection start time:")
+        for s in sorted(counter_dict):
+            print(s.split("_")[0], 'for', s.split("_")[1], 'k years old selection: ', counter_dict[s])
+    else:
+        raise ValueError("'cls' must be either NE, IS, OD, or FD")
+
     for file in files:
-        print(file.name)
         f = file.path
         fname = file.name.replace(".txt", "")
         time = fname.split('_')[1]
@@ -968,6 +981,9 @@ class SumStats(BaSe):
             f2 = f2.iloc[0:int(sseach), ]
             f3 = f3.iloc[0:int(sseach), ]
             data = f3.append(f1.append(f2))
+            counter_list = [data.iloc[i, 0] + "_" + str(data.iloc[i, 1]) for i in range(0, data.shape[0])
+                            if not data.iloc[i, 0].startswith("NE")]
+            counter_dict = dict((x, counter_list.count(x)) for x in set(counter_list))
             data.iloc[:, 0:1] = 'S'
             data = f4.append(data)
             print('Total sample sizes:\nNeutral: {}\n'
@@ -981,6 +997,9 @@ class SumStats(BaSe):
             f1 = f1.iloc[0:int(sseach), ]
             f2 = f2.iloc[0:int(sseach), ]
             data = f1.append(f2)
+            counter_list = [data.iloc[i, 0] + "_" + str(data.iloc[i, 1]) for i in range(0, data.shape[0])
+                            if not data.iloc[i, 0].startswith("NE")]
+            counter_dict = dict((x, counter_list.count(x)) for x in set(counter_list))
             data.iloc[:, 0:1] = 'BS'
             data = f3.append(data)
             print('Total sample sizes:\nIncomplete sweep: {}\n'
@@ -992,9 +1011,16 @@ class SumStats(BaSe):
             f1 = f1.iloc[0:self.N, :]
             f2 = f2.iloc[0:self.N, :]
             data = f1.append(f2)
+            counter_list = [data.iloc[i, 0] + "_" + str(data.iloc[i, 1]) for i in range(0, data.shape[0])
+                            if not data.iloc[i, 0].startswith("NE")]
+            counter_dict = dict((x, counter_list.count(x)) for x in set(counter_list))
             print('Total sample sizes:\nOverdominance: {}\nNeg. freq-dependent selection: {}'.format(f2.shape[0],
                                                                                                      f1.shape[0]))
-            
+
+        print("\nSample sizes for each selection start time:")
+        for s in sorted(counter_dict):
+            print(s.split("_")[0], 'for', s.split("_")[1], 'k years old selection: ', counter_dict[s])
+
         stat_matrix=data.iloc[:,3:].values
         y=data.iloc[:,0].values
         
