@@ -444,17 +444,17 @@ def sum_stat(path_to_sim, path_to_stat, cls, NCHROMS, REP_FROM, REP_TO, N, N_NE)
     else:
         raise ValueError("'cls' must be either NE, IS, OD, or FD")
 
-    for file in files:
-        f = file.path
-        fname = file.name.replace(".txt", "")
+    files = [f.path for f in files]
+    for file in sorted(files):
+        fname = file.split("/")[-1].replace(".txt", "")
         time = fname.split('_')[1]
         r = fname.split('_')[-1]
 
         if fname.startswith("NE"):
-            crom, positions = read_msms(f, NCHROMS, N_NE)
+            crom, positions = read_msms(file, NCHROMS, N_NE)
             croms, pos = rearrange_neutral(crom, positions, NCHROMS, N)
         else:
-            croms, pos = read_msms(f, NCHROMS, N)
+            croms, pos = read_msms(file, NCHROMS, N)
 
         # SUMMARY STATISTICS
         # REGION 1: central 10kb([20kb:30kb])
