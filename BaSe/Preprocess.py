@@ -641,7 +641,7 @@ def sum_stat(path_to_sim, path_to_stat, cls, NCHROMS, REP_FROM, REP_TO, N, N_NE)
 
 
         # Write on csv file
-        f = open(path_to_stat, 'a+')
+        f = open("{}{}.csv".format(path_to_stat, cls), 'a+')
 
         with f:
             header = ['Class', 'Time', 'Iteration',
