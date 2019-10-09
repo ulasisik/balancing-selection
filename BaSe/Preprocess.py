@@ -399,7 +399,7 @@ def calc_rageddness(croms):
     return rgd1
 
 
-def sum_stat(path_to_sim, path_to_stat, cls, NCHROMS, REP_FROM, REP_TO, N, N_NE):
+def sum_stat(path_to_sim, path_to_stat, cls, times, NCHROMS, REP_FROM, REP_TO, N, N_NE):
     '''
     Calculates summary statistics for simulation data:
         -input file must be in a msms(and .txt) format and
@@ -411,6 +411,7 @@ def sum_stat(path_to_sim, path_to_stat, cls, NCHROMS, REP_FROM, REP_TO, N, N_NE)
             -OD: over dominance
             -IS: incomplete sweep
             -NE: neutral
+        times -- times of onset of selection
         NCHROMS (int) -- number of samples(haploid individuals, or chromosoms)
         REP_FROM: number of simulations (replicate) -starting from
         REP_TO: number of simulations -until
@@ -425,17 +426,22 @@ def sum_stat(path_to_sim, path_to_stat, cls, NCHROMS, REP_FROM, REP_TO, N, N_NE)
         once = 1
 
     all_files = os.scandir(path_to_sim)
+
     files = [file for file in all_files
              if file.is_file()
              if file.name.startswith(cls)
              if int(file.name.replace(".txt", "").split("_")[-1]) in range(REP_FROM, REP_TO + 1)]
 
+    files_ne = [f for f in files if f.name.startswith("NE")]
+    files_s = [f for f in files if not f.name.startswith("NE")]
+
+    files_s = [file for file in files_s
+               if int(file.name.replace(".txt", "").split("_")[2]) in times]
+
     if cls == "NE":
-        counter_ne = [f for f in files if f.name.startswith("NE")]
-        print("Sample size of neutral scenario: {}".format(len(counter_ne)))
+        print("Sample size of neutral scenario: {}".format(len(files_ne)))
     elif cls in ("IS", "OD", "FD"):
-        counter_list = [f.name.split("_")[0] + "_" + f.name.split("_")[1] for f in files
-                        if not f.name.startswith("NE")]
+        counter_list = [f.name.split("_")[0] + "_" + f.name.split("_")[1] for f in files_s]
         counter_dict = dict((x, counter_list.count(x)) for x in set(counter_list))
 
         print("\nNumber of samples for each selection start time:")
@@ -444,6 +450,7 @@ def sum_stat(path_to_sim, path_to_stat, cls, NCHROMS, REP_FROM, REP_TO, N, N_NE)
     else:
         raise ValueError("'cls' must be either NE, IS, OD, or FD")
 
+    files = files_s + files_ne
     files = [f.path for f in files]
     for file in sorted(files):
         fname = file.split("/")[-1].replace(".txt", "")
@@ -641,7 +648,7 @@ def sum_stat(path_to_sim, path_to_stat, cls, NCHROMS, REP_FROM, REP_TO, N, N_NE)
 
 
         # Write on csv file
-        f = open("{}{}.csv".format(path_to_stat, cls), 'a+')
+        f = open(path_to_stat, 'a+')
 
         with f:
             header = ['Class', 'Time', 'Iteration',
