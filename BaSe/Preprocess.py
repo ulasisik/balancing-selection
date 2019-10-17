@@ -987,10 +987,10 @@ class SumStats(BaSe):
 
         if self.test == 1:
             f4 = f4.iloc[0:self.N, ]
-            sseach = f4.shape[0] / 3
-            f1 = f1.iloc[0:int(sseach), ]
-            f2 = f2.iloc[0:int(sseach), ]
-            f3 = f3.iloc[0:int(sseach), ]
+            sseach = int(f4.shape[0] / (3 * 7))
+            f1 = f1.iloc[[i for i, j in enumerate(f1.iloc[:, 2]) if j in range(1, sseach + 1)], :]
+            f2 = f2.iloc[[i for i, j in enumerate(f2.iloc[:, 2]) if j in range(1, sseach + 1)], :]
+            f3 = f3.iloc[[i for i, j in enumerate(f3.iloc[:, 2]) if j in range(1, sseach + 1)], :]
             data = f3.append(f1.append(f2))
             counter_list = [data.iloc[i, 0] + "_" + str(data.iloc[i, 1]) for i in range(0, data.shape[0])
                             if not data.iloc[i, 0].startswith("NE")]
@@ -1004,9 +1004,9 @@ class SumStats(BaSe):
 
         elif self.test == 2:
             f3 = f3.iloc[0:self.N, ]
-            sseach = f3.shape[0] / 2
-            f1 = f1.iloc[0:int(sseach), ]
-            f2 = f2.iloc[0:int(sseach), ]
+            sseach = int(f3.shape[0] / (2 * 7))
+            f1 = f1.iloc[[i for i, j in enumerate(f1.iloc[:, 2]) if j in range(1, sseach + 1)], :]
+            f2 = f2.iloc[[i for i, j in enumerate(f2.iloc[:, 2]) if j in range(1, sseach + 1)], :]
             data = f1.append(f2)
             counter_list = [data.iloc[i, 0] + "_" + str(data.iloc[i, 1]) for i in range(0, data.shape[0])
                             if not data.iloc[i, 0].startswith("NE")]
