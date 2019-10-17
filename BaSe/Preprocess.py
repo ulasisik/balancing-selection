@@ -420,6 +420,7 @@ def sum_stat(path_to_sim, path_to_stat, cls, times, NCHROMS, REP_FROM, REP_TO, N
     Output:
         csv file containing summary statistics
     '''
+    print("started")
     if REP_FROM == 1:
         once = 0
     else:
@@ -433,10 +434,14 @@ def sum_stat(path_to_sim, path_to_stat, cls, times, NCHROMS, REP_FROM, REP_TO, N
              if int(file.name.replace(".txt", "").split("_")[-1]) in range(REP_FROM, REP_TO + 1)]
 
     files_ne = [f for f in files if f.name.startswith("NE")]
-    files_s = [f for f in files if not f.name.startswith("NE")]
-
-    files_s = [file for file in files_s
-               if int(file.name.replace(".txt", "").split("_")[2]) in times]
+    files_is = [f for f in files if f.name.startswith("IS")
+                if int(f.name.replace(".txt", "").split("_")[1]) in times]
+    files_od = [f for f in files if f.name.startswith("OD")
+                if int(f.name.replace(".txt", "").split("_")[1]) in times]
+    files_fd = [f for f in files if f.name.startswith("FD")
+                if int(f.name.replace(".txt", "").split("_")[1]) in times]
+    files_s = files_is + files_od + files_fd
+    files = files_s + files_ne
 
     if cls == "NE":
         print("Sample size of neutral scenario: {}".format(len(files_ne)))
@@ -450,7 +455,6 @@ def sum_stat(path_to_sim, path_to_stat, cls, times, NCHROMS, REP_FROM, REP_TO, N
     else:
         raise ValueError("'cls' must be either NE, IS, OD, or FD")
 
-    files = files_s + files_ne
     files = [f.path for f in files]
     for file in sorted(files):
         fname = file.split("/")[-1].replace(".txt", "")

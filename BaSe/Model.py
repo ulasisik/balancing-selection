@@ -304,7 +304,7 @@ class LoadANN(MakeModel):
             l2_regularizer = 0.0001
             lr = 0.0005
             lr_dec = 0.00001
-            dropout = 0.2
+            dropout = 0.5
         elif test == 3:
             units = [20, 20, 10]
             l2_regularizer = 0.001
