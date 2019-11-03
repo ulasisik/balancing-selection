@@ -34,7 +34,7 @@ def read_msms(filename, NCHROMS, N):
     '''
     file = open(filename).readlines()
     if len(file) == 0:
-        raise Exception('The file ' + filename.split('/')[-1] + ' is empty')
+        raise Exception('The file {} is empty'.format(filename.split('/')[-1]))
     # look for the // character in the file
     find = []
     for i, string in enumerate(file):
@@ -48,9 +48,9 @@ def read_msms(filename, NCHROMS, N):
         pos = pos * N
         # Get the number of genomic positions(determined be the number or pointers)
         n_columns = len(list(file[pointer])) - 1
-        # Intialise the empty croms matrix: of type: object
+        # Intialize the empty croms matrix: of type: object
         croms = np.empty((NCHROMS, n_columns), dtype=np.object)
-        # Fill the matrix with the simuated data
+        # Fill the matrix with the simulated data
         for j in range(NCHROMS):
             f = list(file[pointer + j])
             del f[-1]
@@ -143,7 +143,7 @@ def sim_to_matrix(filename, NCHROMS, N, N_NE, sort, method):
         croms, positions = rearrange_neutral(crom, pos, NCHROMS, N)
     else:
         croms, positions = read_msms(filename, NCHROMS, N)
-    
+
     if method == "s":
         pos = np.where(np.abs(positions - N/2) < 1)[0]
         if len(pos) == 0:
@@ -180,7 +180,7 @@ def sim_to_matrix(filename, NCHROMS, N, N_NE, sort, method):
     return croms
 
 
-def matrix_to_image(croms, n_row, n_col, flip='none'):
+def matrix_to_image(croms, n_row, n_col):
     """
     Generates image from sorted haplotype matrix
     Resize image -> (n_row, ncol)
@@ -201,29 +201,9 @@ def matrix_to_image(croms, n_row, n_col, flip='none'):
     bw_croms_uint8 = np.uint8(cromx)
     bw_croms_im = Image.fromarray(bw_croms_uint8 * 255, mode='L')
     im_resized = bw_croms_im.resize((n_col, n_row))
+    return im_resized
 
-    bw_lr = np.fliplr(bw_croms_uint8)
-    bw_im_lr = Image.fromarray(bw_lr * 255, mode='L')
-    im_lr = bw_im_lr.resize((n_col, n_row))
 
-    bw_ud = np.flipud(bw_croms_uint8)
-    bw_im_ud = Image.fromarray(bw_ud * 255, mode='L')
-    im_ud = bw_im_ud.resize((n_col, n_row))
-
-    bw_lrud = np.flipud(bw_lr)
-    bw_im_lrud = Image.fromarray(bw_lrud * 255, mode='L')
-    im_lrud = bw_im_lrud.resize((n_col, n_row))
-
-    if flip == 'none':
-        return im_resized
-    elif flip == 'lr':
-        return im_resized, im_lr
-    elif flip == 'ud':
-        return im_resized, im_ud
-    elif flip == 'lrud':
-        return im_resized, im_lrud
-    elif flip == 'full':
-        return im_resized, im_lr, im_ud, im_lrud
 
 
 def sim_to_image(path_sim, path_image, REP_FROM, REP_TO, NCHROMS, N, N_NE, img_dim=(128,128), clss=("NE", "IS", "OD", "FD"), sort="freq", method="s"):
@@ -258,8 +238,8 @@ def sim_to_image(path_sim, path_image, REP_FROM, REP_TO, NCHROMS, N, N_NE, img_d
             for file in fdir:
                 if file.name.startswith(tuple(clss)) and file.is_file() and int(file.name.replace(".txt", "").split("_")[-1]) in range(REP_FROM, REP_TO+1):
                     croms = sim_to_matrix(file.path, NCHROMS, N, N_NE, sort=sort, method=method)
-                    im_resized = matrix_to_image(croms, n_row=img_dim[0], n_col=img_dim[1], flip='none')
-                    im_resized.save("{}{}.bmp".format(path_image,file.name.replace(".txt","")))
+                    im_resized = matrix_to_image(croms, n_row=img_dim[0], n_col=img_dim[1])
+                    im_resized.save("{}{}.bmp".format(path_image,file.name.replace(".txt", "")))
     else:
         files = [file for file in os.scandir(path_sim)
                  if file.is_file()
@@ -269,7 +249,7 @@ def sim_to_image(path_sim, path_image, REP_FROM, REP_TO, NCHROMS, N, N_NE, img_d
 
         for file in files:
             croms = sim_to_matrix(file.path, NCHROMS, N, N_NE, sort=sort, method=method)
-            im_resized = matrix_to_image(croms, n_row=img_dim[0], n_col=img_dim[1], flip='none')
+            im_resized = matrix_to_image(croms, n_row=img_dim[0], n_col=img_dim[1])
             im_resized.save("{}{}.bmp".format(path_image, file.name.replace(".txt", "")))
 
 
@@ -824,7 +804,7 @@ class Images(BaSe):
         self.image_row = image_size[0]
         self.image_col = image_size[1]
 
-    def load_images(self, path_to_images):
+    def load_images(self, path_to_images, verbose=0):
         """"
         Loads images.
         
@@ -841,71 +821,87 @@ class Images(BaSe):
             ss = [i for i in range(27, 34)]
         elif self.selection_category == "old":
             ss = [i for i in range(34, 41)]
-        print('Times of onset of selection for selection scenarios: {}'.format(ss))
+
+        if verbose > 0:
+            print('Times of onset of selection for selection scenarios: {}'.format(ss))
 
         files = [f for f in os.scandir(path_to_images) if f.is_file() if f.name.endswith(".bmp")]
-        im_ne = [file.path for file in files
-                 if file.name.startswith("NE")
-                 if int(file.name.replace(".bmp", "").split("_")[-1]) in range(1, self.N + 1)]
-        im_is = [file.path for file in files
-                 if file.name.startswith("IS")
-                 if int(file.name.replace(".bmp", "").split("_")[-1]) in range(1, self.N + 1)
-                 if int(file.name.replace(".bmp", "").split("_")[1]) in ss]
-        im_od = [file.path for file in files
-                 if file.name.startswith("OD")
-                 if int(file.name.replace(".bmp", "").split("_")[-1]) in range(1, self.N + 1)
-                 if int(file.name.replace(".bmp", "").split("_")[1]) in ss]
-        im_fd = [file.path for file in files
-                 if file.name.startswith("FD")
-                 if int(file.name.replace(".bmp", "").split("_")[-1]) in range(1, self.N + 1)
-                 if int(file.name.replace(".bmp", "").split("_")[1]) in ss]
+
+        im_ne, im_is, im_od, im_fd = [], [], [], []
+
+        for file in files:
+            if file.name.startswith("NE"):
+                im_ne.append(file.path)
+            elif file.name.startswith("IS"):
+                im_is.append(file.path)
+            elif file.name.startswith("OD"):
+                im_od.append(file.path)
+            elif file.name.startswith("FD"):
+                im_fd.append(file.path)
+            else:
+                raise ValueError("{} file belongs to an unknown class")
 
         if self.test == 1:
-            m_ne = im_ne[0:self.N]
-            m_is = [f for f in im_is
-                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int((self.N / 3) / len(ss)) + 1)]
-            m_od = [f for f in im_od
-                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int((self.N / 3) / len(ss)) + 1)]
-            m_fd = [f for f in im_fd
-                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int((self.N / 3) / len(ss)) + 1)]
+            sseach = int(self.N / (7 * 3))
 
+            m_ne = im_ne[0:sseach * 3 * 7]
+            m_is = [f for f in im_is
+                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, sseach + 1)
+                    if int(f.replace(".bmp", "").split("_")[-2]) in ss]
+            m_od = [f for f in im_od
+                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, sseach + 1)
+                    if int(f.replace(".bmp", "").split("_")[-2]) in ss]
+            m_fd = [f for f in im_fd
+                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, sseach + 1)
+                    if int(f.replace(".bmp", "").split("_")[-2]) in ss]
             listing = m_ne + m_is + m_od + m_fd
-            print('Total sample sizes:\nNeutral: {}\n'
-                  'Selection: {} = {}(IS) + {}(FD) + {}(OD) '.format(len(m_ne),
-                                                                     (len(m_is) + len(m_od) + len(m_fd)),
-                                                                     len(m_is), len(m_od), len(m_fd)))
+            if verbose > 0:
+                print('Total sample sizes:\nNeutral: {}\n'
+                      'Selection: {} = {}(IS) + {}(FD) + {}(OD) '.format(len(m_ne),
+                                                                         (len(m_is) + len(m_od) + len(m_fd)),
+                                                                         len(m_is), len(m_od), len(m_fd)))
 
         elif self.test == 2:
-            m_is = [f for f in im_is
-                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int(self.N / len(ss)) + 1)]
-            m_od = [f for f in im_od
-                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int((self.N / 2) / len(ss)) + 1)]
-            m_fd = [f for f in im_fd
-                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int((self.N / 2) / len(ss)) + 1)]
+            sseach = int(self.N / (7 * 2))
 
+            m_is = [f for f in im_is
+                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, sseach * 2 + 1)
+                    if int(f.replace(".bmp", "").split("_")[-2]) in ss]
+            m_od = [f for f in im_od
+                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, sseach + 1)
+                    if int(f.replace(".bmp", "").split("_")[-2]) in ss]
+            m_fd = [f for f in im_fd
+                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, sseach + 1)
+                    if int(f.replace(".bmp", "").split("_")[-2]) in ss]
             listing = m_is + m_od + m_fd
-            print('Total sample sizes:\nIncomplete sweep: {}\n'
-                  'Balancing selection: {} = {}(FD) + {}(OD) '.format(len(m_is),
-                                                                      (len(m_od) + len(m_fd)),
-                                                                      len(m_od), len(m_fd)))
+            if verbose > 0:
+                print('Total sample sizes:\nIncomplete sweep: {}\n'
+                      'Balancing selection: {} = {}(FD) + {}(OD) '.format(len(m_is),
+                                                                          (len(m_od) + len(m_fd)),
+                                                                          len(m_od), len(m_fd)))
 
         elif self.test == 3:
+            sseach = int(self.N / 7)
+
             m_od = [f for f in im_od
-                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int(self.N / len(ss)) + 1)]
+                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, sseach + 1)
+                    if int(f.replace(".bmp", "").split("_")[-2]) in ss]
             m_fd = [f for f in im_fd
-                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, int(self.N / len(ss)) + 1)]
-
+                    if int(f.replace(".bmp", "").split("_")[-1]) in range(1, sseach + 1)
+                    if int(f.replace(".bmp", "").split("_")[-2]) in ss]
             listing = m_od + m_fd
-            print('Total sample sizes:\nOverdominance: {}\nNeg. freq-dependent selection: {}'.format(len(m_od),
-                                                                                                     len(m_fd)))
+            if verbose > 0:
+                print('Total sample sizes:\nOverdominance: {}\nNeg. freq-dependent selection: {}'.format(len(m_od),
+                                                                                                         len(m_fd)))
 
-        counter_list = [l.split("/")[-1].split("_")[0] + "_" + l.split("/")[-1].split("_")[1] for l in listing
-                        if not l.split("/")[-1].startswith("NE")]
-        counter_dict = dict((x, counter_list.count(x)) for x in set(counter_list))
+        if verbose > 0:
+            counter_list = [l.split("/")[-1].split("_")[0] + "_" + l.split("/")[-1].split("_")[1] for l in listing
+                            if not l.split("/")[-1].startswith("NE")]
+            counter_dict = dict((x, counter_list.count(x)) for x in set(counter_list))
 
-        print("\nSample sizes for each selection start time:")
-        for s in sorted(counter_dict):
-            print(s.split("_")[0], 'for', s.split("_")[1], 'k years old selection: ', counter_dict[s])
+            print("\nSample sizes for each selection start time:")
+            for s in sorted(counter_dict):
+                print(s.split("_")[0], 'for', s.split("_")[1], 'k years old selection: ', counter_dict[s])
 
         im_matrix_rows = len(listing)
         im_matrix_cols = self.image_row * self.image_col
@@ -951,7 +947,7 @@ class SumStats(BaSe):
         '''
         super().__init__(test, selection_category, N)
 
-    def load_sumstats(self, path_to_stats, scale=True, pca=True):
+    def load_sumstats(self, path_to_stats, scale=True, pca=True, verbose=0):
         '''
         Loads and preprocess summary statistics. Preprocessing includes dealing 
         with missing values, shuffling, spliting them into training and valitation 
@@ -979,58 +975,71 @@ class SumStats(BaSe):
             ss = [i for i in range(27, 34)]
         elif self.selection_category == "old":
             ss = [i for i in range(34, 41)]
-        print('Times of onset of selection for selection scenarios: {}'.format(ss))
+
+        if verbose > 0:
+            print('Times of onset of selection for selection scenarios: {}'.format(ss))
 
         f1 = f1.iloc[[i for i, j in enumerate(f1.iloc[:, 1]) if j in ss], :]
         f2 = f2.iloc[[i for i, j in enumerate(f2.iloc[:, 1]) if j in ss], :]
         f3 = f3.iloc[[i for i, j in enumerate(f3.iloc[:, 1]) if j in ss], :]
 
         if self.test == 1:
-            f4 = f4.iloc[0:self.N, ]
-            sseach = int(f4.shape[0] / (3 * 7))
-            f1 = f1.iloc[[i for i, j in enumerate(f1.iloc[:, 2]) if j in range(1, sseach + 1)], :]
-            f2 = f2.iloc[[i for i, j in enumerate(f2.iloc[:, 2]) if j in range(1, sseach + 1)], :]
+            sseach = int(self.N / (3 * 7))
+            f4 = f4.iloc[0:sseach * 3 * 7, :]
+
             f3 = f3.iloc[[i for i, j in enumerate(f3.iloc[:, 2]) if j in range(1, sseach + 1)], :]
+            f2 = f2.iloc[[i for i, j in enumerate(f2.iloc[:, 2]) if j in range(1, sseach + 1)], :]
+            f1 = f1.iloc[[i for i, j in enumerate(f1.iloc[:, 2]) if j in range(1, sseach + 1)], :]
             data = f3.append(f1.append(f2))
-            counter_list = [data.iloc[i, 0] + "_" + str(data.iloc[i, 1]) for i in range(0, data.shape[0])
-                            if not data.iloc[i, 0].startswith("NE")]
-            counter_dict = dict((x, counter_list.count(x)) for x in set(counter_list))
+
+            if verbose > 0:
+                counter_list = [data.iloc[i, 0] + "_" + str(data.iloc[i, 1]) for i in range(0, data.shape[0])
+                                if not data.iloc[i, 0].startswith("NE")]
+                counter_dict = dict((x, counter_list.count(x)) for x in set(counter_list))
+                print('Total sample sizes:\nNeutral: {}\n'
+                      'Selection: {} = {}(IS) + {}(FD) + {}(OD) '.format(f4.shape[0],
+                                                                         (f3.shape[0] + f2.shape[0] + f1.shape[0]),
+                                                                         f3.shape[0], f2.shape[0], f1.shape[0]))
             data.iloc[:, 0:1] = 'S'
             data = f4.append(data)
-            print('Total sample sizes:\nNeutral: {}\n'
-                  'Selection: {} = {}(IS) + {}(FD) + {}(OD) '.format(f4.shape[0],
-                                                                     (f3.shape[0] + f2.shape[0] + f1.shape[0]),
-                                                                     f3.shape[0], f2.shape[0], f1.shape[0]))
 
         elif self.test == 2:
-            f3 = f3.iloc[0:self.N, ]
-            sseach = int(f3.shape[0] / (2 * 7))
-            f1 = f1.iloc[[i for i, j in enumerate(f1.iloc[:, 2]) if j in range(1, sseach + 1)], :]
+            sseach = int(self.N / (2 * 7))
+
+            f3 = f3.iloc[[i for i, j in enumerate(f3.iloc[:, 2]) if j in range(1, sseach * 2 + 1)], :]
             f2 = f2.iloc[[i for i, j in enumerate(f2.iloc[:, 2]) if j in range(1, sseach + 1)], :]
+            f1 = f1.iloc[[i for i, j in enumerate(f1.iloc[:, 2]) if j in range(1, sseach + 1)], :]
             data = f1.append(f2)
-            counter_list = [data.iloc[i, 0] + "_" + str(data.iloc[i, 1]) for i in range(0, data.shape[0])
-                            if not data.iloc[i, 0].startswith("NE")]
-            counter_dict = dict((x, counter_list.count(x)) for x in set(counter_list))
+
+            if verbose > 0:
+                counter_list = [data.iloc[i, 0] + "_" + str(data.iloc[i, 1]) for i in range(0, data.shape[0])]
+                counter_list2 = [f3.iloc[i, 0] + "_" + str(f3.iloc[i, 1]) for i in range(0, f3.shape[0])]
+                counter_list = counter_list + counter_list2
+                counter_dict = dict((x, counter_list.count(x)) for x in set(counter_list))
+                print('Total sample sizes:\nIncomplete sweep: {}\n'
+                      'Balancing selection: {} = {}(FD) + {}(OD) '.format(f3.shape[0],
+                                                                          (f2.shape[0] + f1.shape[0]),
+                                                                          f2.shape[0], f1.shape[0]))
             data.iloc[:, 0:1] = 'BS'
             data = f3.append(data)
-            print('Total sample sizes:\nIncomplete sweep: {}\n'
-                  'Balancing selection: {} = {}(FD) + {}(OD) '.format(f3.shape[0],
-                                                                      (f2.shape[0] + f1.shape[0]),
-                                                                      f2.shape[0], f1.shape[0]))
+
 
         elif self.test == 3:
-            f1 = f1.iloc[0:self.N, :]
-            f2 = f2.iloc[0:self.N, :]
+            sseach = int(self.N / 7)
+            f2 = f2.iloc[[i for i, j in enumerate(f2.iloc[:, 2]) if j in range(1, sseach + 1)], :]
+            f1 = f1.iloc[[i for i, j in enumerate(f1.iloc[:, 2]) if j in range(1, sseach + 1)], :]
             data = f1.append(f2)
-            counter_list = [data.iloc[i, 0] + "_" + str(data.iloc[i, 1]) for i in range(0, data.shape[0])
-                            if not data.iloc[i, 0].startswith("NE")]
-            counter_dict = dict((x, counter_list.count(x)) for x in set(counter_list))
-            print('Total sample sizes:\nOverdominance: {}\nNeg. freq-dependent selection: {}'.format(f2.shape[0],
-                                                                                                     f1.shape[0]))
 
-        print("\nSample sizes for each selection start time:")
-        for s in sorted(counter_dict):
-            print(s.split("_")[0], 'for', s.split("_")[1], 'k years old selection: ', counter_dict[s])
+            if verbose > 0:
+                counter_list = [data.iloc[i, 0] + "_" + str(data.iloc[i, 1]) for i in range(0, data.shape[0])]
+                counter_dict = dict((x, counter_list.count(x)) for x in set(counter_list))
+                print('Total sample sizes:\nOverdominance: {}\nNeg. freq-dependent selection: {}'.format(f2.shape[0],
+                                                                                                         f1.shape[0]))
+
+        if verbose > 0:
+            print("\nSample sizes for each selection start time:")
+            for s in sorted(counter_dict):
+                print(s.split("_")[0], 'for', s.split("_")[1], 'k years old selection: ', counter_dict[s])
 
         stat_matrix=data.iloc[:,3:].values
         y=data.iloc[:,0].values

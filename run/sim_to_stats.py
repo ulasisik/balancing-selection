@@ -13,8 +13,8 @@ from BaSe.Preprocess import sum_stat
 path_to_sim = '/mnt/NEOGENE1/projects/deepLearn_selection_2018/results/decompMSMS/'
 path_to_stats = '/mnt/NEOGENE1/projects/deepLearn_selection_2018/results/stats/'
 
-N = 50000  # length of simulated sequence (selection scenarios)
-N_NE = 500000 # length of simulated sequence (neutral)
+N = 50000           # length of simulated sequence (selection scenarios)
+N_NE = 500000       # length of simulated sequence (neutral)
 NCHROMS = 198
 REP_TO = 1000
 REP_FROM = 1
