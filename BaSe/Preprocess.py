@@ -921,7 +921,7 @@ class Images(BaSe):
         # reshaping, normalizing, convert to categorical data, save
         CHANNELS = 1
         X_train = X_train.reshape(X_train.shape[0], self.image_row, self.image_col, CHANNELS)
-        X_val = X_val.reshape(X_val.shape[0], self.image_row, self.image_row, CHANNELS)
+        X_val = X_val.reshape(X_val.shape[0], self.image_row, self.image_col, CHANNELS)
 
         X_train /= 255
         X_val /= 255

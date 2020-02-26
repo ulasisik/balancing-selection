@@ -293,24 +293,11 @@ class LoadANN(MakeModel):
             input_shape: input shape
         '''
         initializer = 'uniform'
-        if test == 1:
-            units = [20, 15, 10]
-            l2_regularizer = 0.0005
-            lr = 0.005
-            lr_dec = 0.001
-            dropout = 0.2
-        elif test == 2:
-            units = [20, 20, 10]
-            l2_regularizer = 0.0001
-            lr = 0.0005
-            lr_dec = 0.00001
-            dropout = 0.5
-        elif test == 3:
-            units = [20, 20, 10]
-            l2_regularizer = 0.001
-            lr = 0.0005
-            lr_dec = 0.0001
-            dropout = 0.5
+        units = [20, 20, 10]
+        lr = 0.0005
+        l2_regularizer = 0.005
+        lr_dec = 0.00001
+        dropout = 0.5
         
         #input layer
         inp_dim = (66,)
@@ -386,30 +373,20 @@ class MakeCNN(MakeModel):
         
 class LoadCNN(MakeModel):
   
-    def __init__(self, test):
+    def __init__(self, test, image_dim=(128,128)):
         '''
         Loads compiled CNN model with tuned hyperparameters
         
         '''
         #params
-        if test == 1:
-            lr = 0.0005
-            dropout_fc = 0.8
-            dropout_conv = 0.5
-        elif test == 2:
-            lr = 0.0005
-            dropout_fc = 0.8
-            dropout_conv = 0.5
-        elif test == 3:
-            lr = 0.0005
-            dropout_fc = 0.8
-            dropout_conv = 0.5
-
+        lr = 0.00005
+        dropout_fc = 0.0
+        dropout_conv = 0.5
         lr_dec = 0.00001
         filters = [32, 32, 32]
-        input_shape = (128, 128, 1)
+        input_shape = (image_dim[0], image_dim[1], 1)
         units_fc = [128]
-        l2_regularizer = 0.01
+        l2_regularizer = 0.005
         kernel_size = 3
         pooling_size = 2
         initializer = 'uniform' 
