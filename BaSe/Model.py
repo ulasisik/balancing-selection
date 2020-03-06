@@ -127,34 +127,23 @@ class MakeModel(object):
                 height_shift_range=0.,  # randomly shift images vertically (fraction of total height)
                 horizontal_flip=True,  # randomly flip images
                 vertical_flip=False)  # randomly flip images
-
             datagen_train.fit(X)
 
             if validation_data:
-                X_val, y_val = validation_data
-
-                datagen_val = ImageDataGenerator(
-                    samplewise_center=False,  # set each sample mean to 0
-                    zca_whitening=False,  # apply ZCA whitening
-                    rotation_range=0,  # randomly rotate images in the range (degrees, 0 to 180)
-                    width_shift_range=0.,  # randomly shift images horizontally (fraction of total width)
-                    height_shift_range=0.,  # randomly shift images vertically (fraction of total height)
-                    horizontal_flip=True,  # randomly flip images
-                    vertical_flip=False)  # randomly flip images
-
-                datagen_val.fit(X_val)
-
                 hist = self.model.fit_generator(datagen_train.flow(X, y, batch_size=batch_size),
-                        validation_data=datagen_val.flow(X_val, y_val, batch_size=batch_size),
-                        epochs = epoch, verbose=2)
-
+                                                epochs=epoch, validation_data=validation_data, verbose=2)
             else:
-                hist= self.model.fit_generator(datagen.flow(X, y, batch_size=batch_size), 
-                                      epochs=epoch, validation_data=(X_val, y_val), verbose=2)
+                hist = self.model.fit_generator(datagen_train.flow(X, y, batch_size=batch_size),
+                                                epochs=epoch, verbose=2)
+
 
         else:
-            hist = self.model.fit(X, y, batch_size = batch_size, epochs = epoch, 
-                    validation_data = validation_data, verbose = 2)
+            if validation_data:
+                hist = self.model.fit(X, y, batch_size = batch_size, epochs = epoch,
+                        validation_data = validation_data, verbose = 2)
+            else:
+                hist = self.model.fit_generator(X, y, batch_size=batch_size,
+                                                epochs=epoch, verbose=2)
         
         if file_model:
             self.model.save(file_model)
