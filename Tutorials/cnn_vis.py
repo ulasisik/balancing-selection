@@ -5,14 +5,14 @@ Visualizes CNN results
 @author: ulas isildak
 @e-mail: isildak.ulas [at] gmail.com
 """
-import sys                                                                                                             
-sys.path.insert(0, '/mnt/NEOGENE1/projects/deepLearn_selection_2018/balancing-selection')
+import sys
+sys.path.insert(0, '/Users/ulas/Projects/balancing_selection')
 
 from BaSe import vis_cnn
 
 X = "/mnt/NEOGENE1/projects/deepLearn_selection_2018/cnn/model/X_test.npy"
 y = "/mnt/NEOGENE1/projects/deepLearn_selection_2018/cnn/model/y_test.npy"
-model = "/mnt/NEOGENE1/projects/deepLearn_selection_2018/cnn/model/model.h5"
+model = "/Users/ulas/Projects/balancing_selection/Data/Model/CNN_model_recent_1.h5"
 path_to_figs = '/mnt/NEOGENE1/projects/deepLearn_selection_2018/cnn/figs/vis/'
 
 test = 1

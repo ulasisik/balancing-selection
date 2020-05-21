@@ -1,0 +1,32 @@
+
+## 1) Directories
+# Path to slim
+DIRSLIM="/usr/local/sw/SLiM-3.3.2/build/slim"
+
+# Directory of where you will store the simulated data
+DIRDATA="/Users/ulas/Projects/balancing_selection/Data/SimOuts/"
+
+# Directory of where the temporary SLiM scripts will be stored
+DIRTMP="/Users/ulas/Projects/balancing_selection/Data/SLiMScripts/"
+
+
+## 2) Demographic model
+gene_time=29 #generation time (Tremblay and Vézina 2000)
+start_time=602000 #start 1000 generation (~25 kya) before first event
+L=50000
+L_NE=500000
+N_A=11273
+N_AF=23721
+N_B=3104
+N_EU0=2271
+N_AS0=924
+N_end=198
+mu=1.44e-8
+m_AFB=15.8e-5
+m_AFEU=1.1e-5
+m_EUAS=4.19e-5
+m_AFAS=0.48e-5
+grate_eu=0.00196
+grate_as=0.00309
+
+# Parameters related to selection can be modified from doXX.sh files.

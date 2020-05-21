@@ -1,36 +1,37 @@
 args <- commandArgs(T)
+dirs = file.path(as.character(args[1]), "Params.txt")
+funs = file.path(as.character(args[1]), "simFunc.R")
 
-source("/mnt/NEOGENE1/projects/deepLearn_selection_2018/balancing-selection/simulation/simFunc.R")
+source(dirs)
+source(funs)
 
-s = as.numeric(args[1])  #sample 100 diploid individual
-h = as.numeric(args[2])
-r = as.numeric(args[3])
-start=as.numeric(args[4])
-
-gene_time = 29 #generation time (Tremblay and Vézina 2000)
-start_time = 602000 #start 1000 generation (~25 kya) before first event(which is increase N)
+s = as.numeric(args[2])  
+h = as.numeric(args[3])
+r = as.numeric(args[4])
+start=as.numeric(args[5])
 
 for(i in start:r){
   pr = list(
-    mu = 1.44e-8,  #mutation rate
+    mu = mu,
     recrate = rnorm(1, m=1e-8, sd=1e-8/10),  #recombination rate(r)
-    L = 500000,    #length(bp)
-    N_A = 11273,
-    N_AF = 23721,
-    N_B = 3104,
-    N_EU0 = 2271,
-    N_AS0 = 924,
-    N_end = 198,
+    L = L_NE,   
+    N_A = N_A,
+    N_AF = N_AF,
+    N_B = N_B,
+    N_EU0 = N_EU0,
+    N_AS0 = N_AS0,
+    N_end = N_end,
     T_AF = round(start_time/gene_time - 312000/gene_time),
     T_B = round(start_time/gene_time - 125000/gene_time),
     T_EUAS = round(start_time/gene_time - 42300/gene_time),
     Tend = round(start_time/gene_time),  #generation number at which simulation ends(today)
-    m_AFB = 15.8e-5,
-    m_AFEU = 1.1e-5,
-    m_EUAS = 4.19e-5,
-    m_AFAS = 0.48e-5,
-    grate_eu = 0.00196,   #growth rates
-    grate_as = 0.00309,
+    m_AFB = m_AFB,
+    m_AFEU = m_AFEU,
+    m_EUAS = m_EUAS,
+    m_AFAS = m_AFAS,
+    grate_eu = grate_eu,   #growth rates
+    grate_as = grate_as,
+    datadir = DIRDATA,
     h = h,
     s = s,
     r=i)
@@ -67,11 +68,11 @@ for(i in start:r){
             'p3.setSubpopulationSize(asInteger(p3_size));',
             '}',
             '[Tend] late() { ',
-            'p2.outputMSSample([N_end], replace = F, filePath="/mnt/NEOGENE1/projects/deepLearn_selection_2018/50kb/results/decompMSMS/NE_[r].txt");',
+            'p2.outputMSSample([N_end], replace = F, filePath="[datadir]NE_[r].txt");',
             '}', 
             sep = "\n")
   
-  f= file(paste("/mnt/NEOGENE1/projects/deepLearn_selection_2018/50kb/scripts/simulations/SLiM_scripts/NE",i, sep="_"),open = "w")
+  f= file(paste(paste0(DIRTMP,"NE"),i, sep="_"),open = "w")
   sim=complete_gsub(sim,pr)
   write(sim, file=f, append = T)
   close(f)

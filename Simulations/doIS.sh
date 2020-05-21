@@ -1,16 +1,19 @@
 #!/bin/bash 
 
-REP_FROM=1
-REP_TO=10000
+source Params.txt
+
+CWD=$(pwd)
+SIM_FROM=1
+SIM_TO=2
 H=0.5
 
 while read T S
 do 
-     Rscript commandIS.R $S $H $T $REP_TO $REP_FROM
+     Rscript commandIS.R $CWD $S $H $T $SIM_TO $SIM_FROM
 
-     for ((i=$REP_FROM; i<=$REP_TO; i++))
+     for ((i=$SIM_FROM; i<=$SIM_TO; i++))
      do
-	     /usr/local/sw/SLiM-3.2/build/slim /mnt/NEOGENE1/projects/deepLearn_selection_2018/scripts/simulations/SLiM_scripts/IS_"$T"_"$S"_"$i"
+	     $DIRSLIM "$DIRTMP"IS_"$T"_"$i"
      done
 
 done << EOF

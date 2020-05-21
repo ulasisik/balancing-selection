@@ -1,12 +1,32 @@
 # Simulations
 
-Simulations were performed using SLiM. For selection scenarios, we used 21 different selection start times, starting from 20k to 40k years ago. We divide the time of onset of selection into 3 categories: 
+We performed simulations for a neutral(NE) and three different selection scenarios, including incomplete sweep(IS), 
+overdominance(OD) and negative frequency dependent selection(FD). Simulations were performed using SLiM. 
+For selection scenarios, we used 21 different selection start times, starting from 20k to 40k years ago. 
+We divide the time of onset of selection into 3 categories: 
 - **Recent** includes the selection start times ranging from 20k to 26k years ago (i.e. 20, 21,..., 26kya)
 - **Medium** includes the selection start times ranging from 27k to 33k years ago (i.e. 27, 28,..., 33kya)
 - **Old** includes the selection start times ranging from 34k to 40k years ago (i.e. 34, 35,..., 40kya)
 
+## Running simulations
+Before running simulations, it is important to specify the paths for SLiM, simulation outputs and temporary slim files.
+To do so, you should change `DIRSLIM`, `DIRDATA`, and `DIRTMP` values located in `Params.txt` file. By modifying `Params.txt`,
+you can also change parameters of demographic model, mutation/recombination rate, sample size, etc. Parameters related to
+selection (i.e. dominance and selection coefficients, time of onset of selection) and number of simulations can be 
+modified from doXX(NE/IS/OD/FD).sh scripts.
 
-## Incomplete Sweep & Overdominance
+To run simulations, user should run doXX(NE/IS/OD/FD).sh scripts. This scripts will create temporary SLiM scripts in
+`DIRTMP`, and the outputs will be stored in `DIRDATA`. The output files will be in MS file format containing 198 
+randomly sampled haploid chromosomes.
+
+__Note__: The output files will be named in the format of `<CLASS>_<SELECTION.TIME>_<SIM.NUMBER>.txt` for selection scenarios,
+and `<CLASS>_<SIM.NUMBER>.txt` for neutral scenario. So, for example, the first overdominance simulation 
+for 20k years old selection will be named as `OD_20_1.txt`. It is __IMPORTANT__ not to change this naming pattern
+since the BaSe module assumes this naming pattern, and changing file names may cause some functions not to work as expected.
+
+## Simulating selection
+
+### Incomplete Sweep & Overdominance
 
 In SLiM, fitness effect of a mutation(i.e. _B_) is calculated by the selection coefficient (_s_) and dominance coefficient (_h_) of the mutation (the latter used only if the individual is heterozygous):
 
@@ -14,7 +34,7 @@ In SLiM, fitness effect of a mutation(i.e. _B_) is calculated by the selection c
 - w<sub>_BB_</sub> = _w_ * (1.0 + _s_)
 - w<sub>_AB_</sub> = _w_ * (1.0 + _s_ * _h_)
 
-### Incomplete Sweeep
+#### Incomplete Sweeep
 
 For incomplete sweep, we set dominance coefficient _h_ = 0.5 and used selection coefficient _s_ values given at the below table for each time of onset of selection:
 
@@ -42,7 +62,7 @@ For incomplete sweep, we set dominance coefficient _h_ = 0.5 and used selection 
 |39| 0.0067|
 |40| 0.0064|
 
-### Overdominance
+#### Overdominance
 
 To simulate overdominance model, we set _s_ = 0.001 and used following dominance coefficient _h_ values:
 
@@ -70,7 +90,7 @@ To simulate overdominance model, we set _s_ = 0.001 and used following dominance
 |39| 6|
 |40| 6|
 
-## Negative Frequency Dependent Selection
+### Negative Frequency Dependent Selection
 
 In order to simulate negative frequency dependent selection, we introduced the _fitness()_ callback as it can assign different fitness to the same polymorphism. In each generation, the relative fitness of the target polymorphism (mut) is calculated as follows:
 
