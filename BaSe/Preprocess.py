@@ -20,7 +20,6 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import NearestNeighbors
 from sklearn.model_selection import train_test_split
 
-np.seterr(divide='ignore', invalid='ignore')
 
 def read_msms(filename, NCHROMS, N):
     """
@@ -461,9 +460,11 @@ def sum_stats(croms, pos, NCHROMS, sname):
     mean_obs_het1 = np.mean(obs_het1)
     median_obs_het1 = np.median(obs_het1)
     max_obs_het1 = np.max(obs_het1)
-    mean_obs_exp1 = np.nanmean(obs_het1 / exp_het1)
-    median_obs_exp1 = np.nanmedian(obs_het1 / exp_het1)
-    max_obs_exp1 = np.nanmax(obs_het1 / exp_het1)
+    # return 0, if 0/0 encountered
+    ob_exp_het1 = np.divide(obs_het1, exp_het1, out=np.zeros_like(obs_het1), where=exp_het1 != 0)
+    mean_obs_exp1 = np.nanmean(ob_exp_het1)
+    median_obs_exp1 = np.nanmedian(ob_exp_het1)
+    max_obs_exp1 = np.nanmax(ob_exp_het1)
 
     # LD r
     median_r21 = calc_median_r2(g1)
@@ -553,9 +554,11 @@ def sum_stats(croms, pos, NCHROMS, sname):
     mean_obs_het2 = np.mean(obs_het2)
     median_obs_het2 = np.median(obs_het2)
     max_obs_het2 = np.max(obs_het2)
-    mean_obs_exp2 = np.nanmean(obs_het2 / exp_het2)
-    median_obs_exp2 = np.nanmedian(obs_het2 / exp_het2)
-    max_obs_exp2 = np.nanmax(obs_het2 / exp_het2)
+    # Return 0, if 0/0 encountered
+    ob_exp_het2 = np.divide(obs_het2, exp_het2, out=np.zeros_like(obs_het2), where=exp_het2 != 0)
+    mean_obs_exp2 = np.nanmean(ob_exp_het2)
+    median_obs_exp2 = np.nanmedian(ob_exp_het2)
+    max_obs_exp2 = np.nanmax(ob_exp_het2)
 
     # LD r
     median_r2 = calc_median_r2(g2)
