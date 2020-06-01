@@ -473,7 +473,7 @@ class LoadCNN(MakeModel):
         super().__init__(model)
 
 
-def predict(x, model, labels, test, file=None):
+def predict(x, model, labels, positions, test, file=None):
     """
     Performs prediction on real data
 
@@ -481,6 +481,7 @@ def predict(x, model, labels, test, file=None):
         x: input data
         model: full path to the trained model
         labels: list of labels (SNP IDs)
+        positions: positions of variants
         test: test number
         file: location where the output dataframe will be saved. If None, returns the data frame
     """
@@ -499,9 +500,11 @@ def predict(x, model, labels, test, file=None):
     y_pred_class = [mapings[i[0]] for i in np.array(y_pred_class, dtype="int32")]
 
     df = pd.DataFrame({"SNP": labels,
+                       "Positions": positions,
                        "Pred": list(chain(*y_pred)),
                        "PredClass": y_pred_class})
     if file:
         df.to_csv(file)
     else:
         return df
+

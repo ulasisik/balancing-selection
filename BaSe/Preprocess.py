@@ -1137,6 +1137,15 @@ class VCF(object):
 
         return croms_new, pos_new, new_snp_id
 
+    def filter_data(self, filter_freq=0.1):
+        """Filters positions whose frequency is less than filter_freq"""
+
+        freqs = np.true_divide(np.sum(self.croms, axis=0), self.croms.shape[0])
+
+        self.croms = self.croms[:, freqs > filter_freq]
+        self.positions = np.array(self.positions)[freqs > filter_freq].tolist()
+        self.snp_id = np.array(self.snp_id)[freqs > filter_freq].tolist()
+
     def create_image(self, N, sort, method, target_freq=(0.4, 0.6), target_list=None,
                      target_range=None, img_dim=(128, 128)):
         """
@@ -1167,6 +1176,7 @@ class VCF(object):
         ncol = img_dim[0] * img_dim[1]
         im_matrix = np.empty((nrow, ncol), dtype='float32')
 
+        target_pos = []
         for i, target_snp in enumerate(target_list):
             croms, pos, snp_id = self._crop_for_target(N, target_snp)
             npos = int(np.where(snp_id == target_snp)[0][0])
@@ -1176,12 +1186,13 @@ class VCF(object):
             im = np.asarray(im_resized).flatten()
             im = im.astype('float32')
             im_matrix[i, :] = im
+            target_pos.append(self.positions[self.snp_id.index(target_snp)])
 
         CHANNELS = 1
         im_matrix = im_matrix.reshape(im_matrix.shape[0], img_dim[0], img_dim[1], CHANNELS)
         im_matrix /= 255
 
-        return im_matrix, target_list
+        return im_matrix, target_list, target_pos
 
     def create_stat(self, N, target_freq=(0.4, 0.6), target_list=None, target_range=None, scale=False, pca=False):
         """
@@ -1207,13 +1218,14 @@ class VCF(object):
             raise ValueError("Target SNP not found in VCF file")
 
         statdf = pd.DataFrame()
-
+        target_pos = []
         for target_snp in target_list:
             croms, pos, _ = self._crop_for_target(N, target_snp)
             labs, stats = sum_stats(croms, pos, croms.shape[0], sname="0_0_0")
 
             statdf = statdf.append(dict(zip(labs, stats)), ignore_index=True)
             statdf = statdf[labs]
+            target_pos.append(self.positions[self.snp_id.index(target_snp)])
 
         stat_matrix = statdf.iloc[:, 3:].values
 
@@ -1228,4 +1240,4 @@ class VCF(object):
             stat_matrix_pca = pca.transform(stat_matrix)
             stat_matrix = stat_matrix_pca
 
-        return stat_matrix, target_list
+        return stat_matrix, target_list, target_pos
